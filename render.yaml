@@ -1,0 +1,119 @@
+# Render Blueprint — deploys the full stack in one shot.
+#
+# Usage: push this repo to GitHub/GitLab, then in the Render dashboard
+# choose "New > Blueprint" and point it at the repo. Full walkthrough,
+# including the two values you must fill in by hand after the first
+# deploy (GATEWAY_URL, CORS_ORIGIN — Render's public URL isn't known
+# until a service is actually created), in docs/deploy-render.md.
+#
+# Only `gateway` and `web` are `type: web` (publicly reachable). Everything
+# else is `type: pserv` (private network only) — same "único punto de
+# entrada público" design as docker-compose.yml, see docs/security.md.
+databases:
+  - name: compiler-img-postgres
+    databaseName: compiler_img
+    user: compiler_img
+    plan: free
+
+envVarGroups:
+  - name: compiler-img-shared-secrets
+    envVars:
+      # Shared by gateway (verifies) and projects (issues) — must be the
+      # exact same value, hence a group instead of two independent
+      # generateValue: true (which would produce two different secrets).
+      - key: JWT_SECRET
+        generateValue: true
+
+services:
+  - type: pserv
+    name: compiler-img-compiler
+    runtime: docker
+    dockerfilePath: ./services/compiler/Dockerfile
+    dockerContext: .
+    plan: free
+    envVars:
+      - key: PORT
+        value: 4001
+      - key: HOST
+        value: 0.0.0.0
+
+  - type: pserv
+    name: compiler-img-projects
+    runtime: docker
+    dockerfilePath: ./services/projects/Dockerfile
+    dockerContext: .
+    plan: free
+    envVars:
+      - fromGroup: compiler-img-shared-secrets
+      - key: JWT_EXPIRES_IN
+        value: 7d
+      - key: PORT
+        value: 4003
+      - key: HOST
+        value: 0.0.0.0
+      - key: DATABASE_URL
+        fromDatabase:
+          name: compiler-img-postgres
+          property: connectionString
+
+  - type: pserv
+    name: compiler-img-ai-assist
+    runtime: docker
+    dockerfilePath: ./services/ai-assist/Dockerfile
+    dockerContext: .
+    plan: free
+    envVars:
+      - key: PORT
+        value: 4004
+      - key: HOST
+        value: 0.0.0.0
+      - key: ANTHROPIC_API_KEY
+        sync: false # fill in manually in the Render dashboard
+      - key: ANTHROPIC_MODEL
+        value: claude-haiku-4-5-20251001
+      - key: ANTHROPIC_MAX_TOKENS
+        value: 1024
+
+  - type: web
+    name: compiler-img-gateway
+    runtime: docker
+    dockerfilePath: ./apps/gateway/Dockerfile
+    dockerContext: .
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - fromGroup: compiler-img-shared-secrets
+      - key: PORT
+        value: 4000
+      - key: HOST
+        value: 0.0.0.0
+      - key: RATE_LIMIT_MAX
+        value: 100
+      - key: RATE_LIMIT_WINDOW_MS
+        value: 60000
+      # Private-network addresses: Render resolves a pserv's hostname to
+      # its own `name:` field, bare (no scheme) — see docs/deploy-render.md.
+      - key: COMPILER_SERVICE_URL
+        value: http://compiler-img-compiler:4001
+      - key: PROJECTS_SERVICE_URL
+        value: http://compiler-img-projects:4003
+      - key: AI_SERVICE_URL
+        value: http://compiler-img-ai-assist:4004
+      # Render's public URL for *this* service isn't knowable until after
+      # it's created — set manually once in the dashboard (see deploy guide).
+      - key: CORS_ORIGIN
+        sync: false
+
+  - type: web
+    name: compiler-img-web
+    runtime: docker
+    dockerfilePath: ./apps/web/Dockerfile
+    dockerContext: .
+    plan: free
+    envVars:
+      # Resolved at container *start*, not build time (see
+      # apps/web/docker/runtime-config-entrypoint.sh) — the browser's own
+      # URL for the gateway. Same chicken-and-egg as CORS_ORIGIN above:
+      # fill in with compiler-img-gateway's actual public URL once known.
+      - key: GATEWAY_URL
+        sync: false

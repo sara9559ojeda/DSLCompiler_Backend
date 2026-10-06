@@ -1,0 +1,19 @@
+{
+  "name": "@compiler-img/shared",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "echo \"no tests in shared\""
+  },
+  "dependencies": {
+    "@sinclair/typebox": "^0.33.17"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3"
+  }
+}

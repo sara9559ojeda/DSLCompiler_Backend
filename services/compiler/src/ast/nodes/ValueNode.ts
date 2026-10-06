@@ -1,0 +1,71 @@
+import type { SourcePosition } from "@compiler-img/shared";
+
+/**
+ * Visitor over the value-node hierarchy. This is the one place in the AST
+ * where a node can be one of several concrete shapes, so it's the one place
+ * the Visitor pattern earns its keep — the SemanticAnalyzer implements this
+ * to resolve each literal kind differently (see SemanticAnalyzer.ts).
+ */
+export interface IValueVisitor<T> {
+  visitNumberLiteral(node: NumberLiteralNode): T;
+  visitStringLiteral(node: StringLiteralNode): T;
+  visitHexColorLiteral(node: HexColorLiteralNode): T;
+  visitIdentifierValue(node: IdentifierValueNode): T;
+}
+
+export abstract class ValueNode {
+  protected constructor(public readonly position: SourcePosition) {}
+  abstract accept<T>(visitor: IValueVisitor<T>): T;
+}
+
+export class NumberLiteralNode extends ValueNode {
+  constructor(
+    public readonly value: number,
+    position: SourcePosition,
+  ) {
+    super(position);
+  }
+
+  accept<T>(visitor: IValueVisitor<T>): T {
+    return visitor.visitNumberLiteral(this);
+  }
+}
+
+export class StringLiteralNode extends ValueNode {
+  constructor(
+    public readonly value: string,
+    position: SourcePosition,
+  ) {
+    super(position);
+  }
+
+  accept<T>(visitor: IValueVisitor<T>): T {
+    return visitor.visitStringLiteral(this);
+  }
+}
+
+export class HexColorLiteralNode extends ValueNode {
+  constructor(
+    public readonly value: string,
+    position: SourcePosition,
+  ) {
+    super(position);
+  }
+
+  accept<T>(visitor: IValueVisitor<T>): T {
+    return visitor.visitHexColorLiteral(this);
+  }
+}
+
+export class IdentifierValueNode extends ValueNode {
+  constructor(
+    public readonly name: string,
+    position: SourcePosition,
+  ) {
+    super(position);
+  }
+
+  accept<T>(visitor: IValueVisitor<T>): T {
+    return visitor.visitIdentifierValue(this);
+  }
+}

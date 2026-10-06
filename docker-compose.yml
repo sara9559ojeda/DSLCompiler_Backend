@@ -1,0 +1,112 @@
+name: compiler-img
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-compiler_img}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-compiler_img}
+      POSTGRES_DB: ${POSTGRES_DB:-compiler_img}
+    volumes:
+      - compiler_img_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-compiler_img}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks: [internal]
+
+  # One-off job: applies Prisma migrations, then exits. `projects` waits for
+  # it to finish successfully before starting (see depends_on below). Uses
+  # the `build` stage (still has the Prisma CLI) instead of the lean
+  # `runtime` image the `projects` service itself runs.
+  projects-migrate:
+    build:
+      context: .
+      dockerfile: services/projects/Dockerfile
+      target: build
+    command: ["npx", "prisma", "migrate", "deploy"]
+    working_dir: /app/services/projects
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-compiler_img}:${POSTGRES_PASSWORD:-compiler_img}@postgres:5432/${POSTGRES_DB:-compiler_img}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks: [internal]
+
+  compiler:
+    build:
+      context: .
+      dockerfile: services/compiler/Dockerfile
+    environment:
+      PORT: 4001
+      HOST: 0.0.0.0
+    networks: [internal]
+
+  projects:
+    build:
+      context: .
+      dockerfile: services/projects/Dockerfile
+    environment:
+      PORT: 4003
+      HOST: 0.0.0.0
+      JWT_SECRET: ${JWT_SECRET:-dev-secret-change-me}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-compiler_img}:${POSTGRES_PASSWORD:-compiler_img}@postgres:5432/${POSTGRES_DB:-compiler_img}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      projects-migrate:
+        condition: service_completed_successfully
+    networks: [internal]
+
+  ai-assist:
+    build:
+      context: .
+      dockerfile: services/ai-assist/Dockerfile
+    environment:
+      PORT: 4004
+      HOST: 0.0.0.0
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      ANTHROPIC_MODEL: ${ANTHROPIC_MODEL:-claude-haiku-4-5-20251001}
+      ANTHROPIC_MAX_TOKENS: ${ANTHROPIC_MAX_TOKENS:-1024}
+    networks: [internal]
+
+  # Único punto de entrada público hacia los servicios internos.
+  gateway:
+    build:
+      context: .
+      dockerfile: apps/gateway/Dockerfile
+    environment:
+      PORT: 4000
+      HOST: 0.0.0.0
+      JWT_SECRET: ${JWT_SECRET:-dev-secret-change-me}
+      CORS_ORIGIN: ${CORS_ORIGIN:-*}
+      RATE_LIMIT_MAX: ${RATE_LIMIT_MAX:-100}
+      RATE_LIMIT_WINDOW_MS: ${RATE_LIMIT_WINDOW_MS:-60000}
+      COMPILER_SERVICE_URL: http://compiler:4001
+      PROJECTS_SERVICE_URL: http://projects:4003
+      AI_SERVICE_URL: http://ai-assist:4004
+    ports:
+      - "4000:4000"
+    depends_on: [compiler, projects, ai-assist]
+    networks: [internal]
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    environment:
+      # Resolved at container *start* (see docker/runtime-config-entrypoint.sh),
+      # not baked in at build time — the browser's own URL for the gateway.
+      GATEWAY_URL: ${PUBLIC_GATEWAY_URL:-http://localhost:4000}
+    ports:
+      - "8080:80"
+    depends_on: [gateway]
+    networks: [internal]
+
+networks:
+  internal:
+
+volumes:
+  compiler_img_postgres_data:
