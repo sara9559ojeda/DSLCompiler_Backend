@@ -6,9 +6,14 @@
 # deploy (GATEWAY_URL, CORS_ORIGIN — Render's public URL isn't known
 # until a service is actually created), in docs/deploy-render.md.
 #
-# Only `gateway` and `web` are `type: web` (publicly reachable). Everything
-# else is `type: pserv` (private network only) — same "único punto de
-# entrada público" design as docker-compose.yml, see docs/security.md.
+# All 5 services are `type: web` (Render's Private Services feature —
+# which the original design used for compiler/projects/ai-assist — isn't
+# available on every workspace plan). Because `projects` may be reached
+# directly instead of only through the gateway, it verifies the JWT itself
+# rather than trusting a gateway-set header — see
+# docs/adr/0007-public-services-with-self-verified-auth.md and
+# docs/security.md. compiler/ai-assist hold no user data, so making them
+# public carries no equivalent risk.
 databases:
   - name: compiler-img-postgres
     databaseName: compiler_img
@@ -18,31 +23,34 @@ databases:
 envVarGroups:
   - name: compiler-img-shared-secrets
     envVars:
-      # Shared by gateway (verifies) and projects (issues) — must be the
-      # exact same value, hence a group instead of two independent
-      # generateValue: true (which would produce two different secrets).
+      # Shared by gateway (verifies) and projects (issues *and* verifies —
+      # see ADR 0007) — must be the exact same value, hence a group instead
+      # of two independent generateValue: true (which would produce two
+      # different secrets).
       - key: JWT_SECRET
         generateValue: true
 
 services:
-  - type: pserv
+  - type: web
     name: compiler-img-compiler
     runtime: docker
     dockerfilePath: ./services/compiler/Dockerfile
     dockerContext: .
     plan: free
+    healthCheckPath: /health
     envVars:
       - key: PORT
         value: 4001
       - key: HOST
         value: 0.0.0.0
 
-  - type: pserv
+  - type: web
     name: compiler-img-projects
     runtime: docker
     dockerfilePath: ./services/projects/Dockerfile
     dockerContext: .
     plan: free
+    healthCheckPath: /health
     envVars:
       - fromGroup: compiler-img-shared-secrets
       - key: JWT_EXPIRES_IN
@@ -56,12 +64,13 @@ services:
           name: compiler-img-postgres
           property: connectionString
 
-  - type: pserv
+  - type: web
     name: compiler-img-ai-assist
     runtime: docker
     dockerfilePath: ./services/ai-assist/Dockerfile
     dockerContext: .
     plan: free
+    healthCheckPath: /health
     envVars:
       - key: PORT
         value: 4004
@@ -91,8 +100,10 @@ services:
         value: 100
       - key: RATE_LIMIT_WINDOW_MS
         value: 60000
-      # Private-network addresses: Render resolves a pserv's hostname to
-      # its own `name:` field, bare (no scheme) — see docs/deploy-render.md.
+      # Render gives every web/private service an internal hostname equal
+      # to its own `name:` field (bare, no scheme) — reachable from other
+      # services in the same account even though these three also have
+      # public URLs now. See docs/deploy-render.md.
       - key: COMPILER_SERVICE_URL
         value: http://compiler-img-compiler:4001
       - key: PROJECTS_SERVICE_URL

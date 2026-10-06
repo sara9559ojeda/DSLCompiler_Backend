@@ -1,7 +1,7 @@
 # Desplegar en Render
 
 Usa [`render.yaml`](../render.yaml) (un "Blueprint" de Render) para crear
-los 6 servicios + la base de datos de un solo golpe, a partir de los mismos
+los 5 servicios + la base de datos de un solo golpe, a partir de los mismos
 Dockerfiles que ya usa `docker-compose.yml` — no hay nada nuevo que
 mantener.
 
@@ -68,14 +68,26 @@ en vivo y permitir exportar SVG/PNG igual que en local.
 
 ## Qué es privado y qué es público
 
-Igual que en `docker-compose.yml` (ver [docs/security.md](security.md)):
-`compiler-img-compiler`, `compiler-img-projects` y `compiler-img-ai-assist`
-son `type: pserv` — **no tienen URL pública**, solo son alcanzables desde
-otros servicios de tu cuenta de Render por red privada. Si algo no
-conecta, antes de tocar el código revisá que el nombre del servicio en
-`render.yaml` coincida exactamente con el que usan `COMPILER_SERVICE_URL`
-/ `PROJECTS_SERVICE_URL` / `AI_SERVICE_URL` en `compiler-img-gateway` (el
-hostname interno de Render es literalmente el `name:` del servicio).
+A diferencia de `docker-compose.yml` (donde `compiler`/`projects`/
+`ai-assist` solo viven en la red interna de Docker), en Render **los 5
+servicios son `type: web`** — el plan de Render de esta cuenta no incluye
+Private Services (`type: pserv` falla con *"service type is not available
+for this plan"* al crear el Blueprint; si tu cuenta sí lo soporta, podés
+volver a `pserv` para esos tres).
+
+Esto es seguro porque `projects` **verifica el JWT por sí mismo**
+(`Authorization: Bearer <token>`, no confía en ningún header) en vez de
+asumir que solo el gateway puede alcanzarlo — ver
+[ADR 0007](adr/0007-public-services-with-self-verified-auth.md). `compiler`
+y `ai-assist` no manejan datos de usuario, así que ser públicos no abre un
+agujero equivalente (sí quedan sin el rate limiting del gateway si alguien
+les pega directo — ver [docs/security.md](security.md)).
+
+Si algo no conecta entre servicios, antes de tocar el código revisá que el
+nombre del servicio en `render.yaml` coincida exactamente con el que usan
+`COMPILER_SERVICE_URL` / `PROJECTS_SERVICE_URL` / `AI_SERVICE_URL` en
+`compiler-img-gateway` (el hostname interno de Render es literalmente el
+`name:` del servicio, aunque también tenga URL pública).
 
 ## Antes de confirmar el Blueprint
 

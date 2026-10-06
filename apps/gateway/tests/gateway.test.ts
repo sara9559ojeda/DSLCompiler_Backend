@@ -92,7 +92,7 @@ describe("Gateway", () => {
     expect(fake.lastRequest).toBeUndefined();
   });
 
-  it("forwards the verified user id as x-user-id on an authenticated request", async () => {
+  it("forwards the original Authorization header on an authenticated request", async () => {
     const fake = new FakeUpstreamClient(jsonResponse({ projects: [] }));
     const app = await buildServer({ upstreamClient: fake });
     const token = app.jwt.sign({ sub: "user-42", email: "ana@example.com" });
@@ -104,7 +104,7 @@ describe("Gateway", () => {
     });
 
     expect(response.statusCode).toBe(200);
-    expect(fake.lastRequest?.headers).toMatchObject({ "x-user-id": "user-42" });
+    expect(fake.lastRequest?.headers).toMatchObject({ authorization: `Bearer ${token}` });
   });
 
   it("resolves :id in both the public path and the upstream path template", async () => {
@@ -134,7 +134,7 @@ describe("Gateway", () => {
 
     expect(response.statusCode).toBe(200);
     expect(fake.lastRequest).toMatchObject({ path: "/suggest", method: "POST" });
-    expect(fake.lastRequest?.headers?.["x-user-id"]).toBeUndefined();
+    expect(fake.lastRequest?.headers?.authorization).toBeUndefined();
   });
 
   it("proxies POST /api/ai/explain-error to the ai target", async () => {

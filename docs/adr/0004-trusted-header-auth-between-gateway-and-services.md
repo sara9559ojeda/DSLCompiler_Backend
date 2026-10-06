@@ -1,5 +1,11 @@
 # ADR 0004: Autenticación de un solo punto — el gateway verifica, los servicios internos confían
 
+> **Superseded por [ADR 0007](0007-public-services-with-self-verified-auth.md).**
+> El despliegue real terminó sin Private Services disponibles en el plan de
+> Render de la cuenta usada, así que `projects` pasó a verificar el JWT por
+> sí mismo en vez de confiar en `x-user-id`. Esta decisión queda como
+> registro histórico de por qué el diseño original era así.
+
 ## Contexto
 
 El Projects service necesita saber qué usuario hace cada petición para

@@ -39,7 +39,7 @@ export function buildServer(options: BuildServerOptions = {}): FastifyInstance {
   fastify.get("/health", async () => ({ status: "ok" }));
 
   registerAuthRoutes(fastify, { userRepository, passwordHasher, tokenService });
-  registerProjectRoutes(fastify, { projectRepository });
+  registerProjectRoutes(fastify, { projectRepository, tokenService });
 
   return fastify;
 }

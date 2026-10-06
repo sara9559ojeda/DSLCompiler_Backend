@@ -5,11 +5,20 @@ Resumen consolidado — cada decisión ya está documentada donde se tomó
 
 ## Superficie pública
 
-Solo dos servicios tienen un puerto publicado en `docker-compose.yml`:
-**gateway** (`:4000`) y **web** (`:8080`). `compiler`, `projects`,
-`ai-assist` y `postgres` viven exclusivamente en la red interna de Docker
-(`internal`) — no son alcanzables desde fuera del host, ni siquiera si
-alguien conoce el puerto interno.
+**En `docker-compose.yml`** (local): solo dos servicios tienen un puerto
+publicado — **gateway** (`:4000`) y **web** (`:8080`). `compiler`,
+`projects`, `ai-assist` y `postgres` viven exclusivamente en la red
+interna de Docker (`internal`) — no son alcanzables desde fuera del host.
+
+**En Render** (`render.yaml`): los 5 servicios de aplicación son
+públicos (`type: web`) — el plan de Render usado no soporta Private
+Services. Esto es un cambio de topología de red, no de modelo de
+confianza: `projects` nunca confió en la red para estar seguro (ver
+[ADR 0007](adr/0007-public-services-with-self-verified-auth.md)), así que
+sigue siendo seguro alcanzable directamente. `compiler` y `ai-assist` no
+manejan datos de usuario, así que exponerlos no agrega riesgo equivalente
+— sí pierden el rate limiting del gateway si alguien les pega directo
+(ver "Rate limiting y CORS" abajo).
 
 ## Secrets
 
@@ -28,13 +37,16 @@ alguien conoce el puerto interno.
 
 - Contraseñas hasheadas con **Argon2** (`Argon2PasswordHasher`), nunca en
   texto plano ni con un hash reversible.
-- JWT emitido por el Projects service (`JwtTokenService`, standalone,
-  sin depender de Fastify) y verificado **solo por el gateway**
-  (`fastify.authenticate`, `@fastify/jwt`). Ver
-  [ADR 0004](adr/0004-trusted-header-auth-between-gateway-and-services.md).
-  El Projects service confía en el header interno `x-user-id` que el
-  gateway agrega después de verificar — como Projects nunca se expone
-  públicamente, ese header no puede falsificarse desde fuera.
+- JWT emitido por el Projects service (`JwtTokenService`, standalone, sin
+  depender de Fastify) y **verificado dos veces**: una vez en el gateway
+  (`fastify.authenticate`, `@fastify/jwt`, rechazo rápido en el borde) y
+  otra vez en `projects` (`ITokenService.verify()`, mismo `JWT_SECRET`) —
+  `projects` nunca confía en un header, siempre verifica el
+  `Authorization: Bearer <token>` que recibe. Ver
+  [ADR 0007](adr/0007-public-services-with-self-verified-auth.md) (y
+  [ADR 0004](adr/0004-trusted-header-auth-between-gateway-and-services.md)
+  para el diseño original de un solo punto de verificación, descartado al
+  no tener Private Services disponibles en Render).
 - `JWT_SECRET` debe ser el mismo valor en `apps/gateway` y
   `services/projects` — documentado en ambos `.env.example`.
 
@@ -48,10 +60,17 @@ duplicarlo.
 
 ## Rate limiting y CORS
 
-`@fastify/rate-limit` en el gateway (único punto de entrada), configurable
-por entorno (`RATE_LIMIT_MAX`, `RATE_LIMIT_WINDOW_MS`). `@fastify/cors`
-con `CORS_ORIGIN` configurable — en desarrollo `*`, en producción debe
-restringirse al origen real del frontend.
+`@fastify/rate-limit` en el gateway, configurable por entorno
+(`RATE_LIMIT_MAX`, `RATE_LIMIT_WINDOW_MS`). `@fastify/cors` con
+`CORS_ORIGIN` configurable — en desarrollo `*`, en producción debe
+restringirse al origen real del frontend. En Render, como `compiler`,
+`projects` y `ai-assist` también tienen URL pública (ver arriba), alguien
+que les pegue directo evita el rate limit del gateway — no pueden leer/
+escribir datos ajenos sin un JWT válido (`projects` lo verifica), pero sí
+podrían agotar cuota de la API de Anthropic contra `ai-assist` o generar
+carga de cómputo contra `compiler`. Mitigarlo (rate limiting propio por
+servicio) queda fuera de alcance mientras no sea un problema real — ver
+"Consecuencias" en ADR 0007.
 
 ## Manejo de errores
 

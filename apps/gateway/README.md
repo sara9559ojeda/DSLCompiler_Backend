@@ -1,8 +1,13 @@
 # @compiler-img/gateway
 
-Único punto de entrada público del sistema. Valida y limita las peticiones
-externas y las reenvía a los servicios internos (`compiler`, `projects`, y a
-futuro `ai-assist`) — ninguno de esos servicios se expone directamente.
+Punto de entrada público del sistema para el frontend. Valida y limita las
+peticiones externas y las reenvía a los servicios internos (`compiler`,
+`projects`, `ai-assist`) con un esquema compartido. En `docker-compose.yml`
+esos tres servicios además viven en una red interna sin puerto expuesto; en
+despliegues donde eso no es posible (ver
+[docs/deploy-render.md](../../docs/deploy-render.md)), `projects` sigue
+siendo seguro porque verifica el JWT él mismo — ver
+[ADR 0007](../../docs/adr/0007-public-services-with-self-verified-auth.md).
 
 ## Responsabilidades
 
@@ -11,12 +16,12 @@ futuro `ai-assist`) — ninguno de esos servicios se expone directamente.
 - **Rate limiting** (`@fastify/rate-limit`), configurable por entorno.
 - **CORS** (`@fastify/cors`).
 - **Autenticación JWT** (`@fastify/jwt`): `fastify.authenticate` verifica el
-  token y, en las rutas con `requiresAuth: true` (todo `/api/projects*`), el
-  gateway agrega el header interno de confianza `x-user-id` con el id ya
-  verificado antes de reenviar — el Projects service nunca vuelve a verificar
-  el JWT, solo confía en ese header (solo el gateway puede alcanzarlo). Las
-  rutas de compilar/exportar siguen siendo anónimas a propósito (no
-  persisten nada).
+  token y rechaza rápido en el borde las rutas con `requiresAuth: true`
+  (todo `/api/projects*`). El header `Authorization` original se reenvía
+  tal cual al upstream — `projects` lo vuelve a verificar de forma
+  independiente (defensa en profundidad, no un passthrough de confianza).
+  Las rutas de compilar/exportar/IA siguen siendo anónimas a propósito (no
+  persisten nada por usuario).
 - **Proxy genérico** con soporte de parámetros de ruta (`:id`): las rutas
   públicas viven en `src/routes/routes.config.ts` (método, path público,
   path upstream —con los mismos `:param`—, servicio destino, si requiere

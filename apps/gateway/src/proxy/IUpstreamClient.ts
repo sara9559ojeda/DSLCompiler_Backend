@@ -5,7 +5,7 @@ export interface UpstreamRequest {
   readonly path: string;
   readonly method: UpstreamMethod;
   readonly body: unknown;
-  /** Trusted internal headers the gateway adds itself (e.g. x-user-id after JWT verification) — never client-supplied. */
+  /** Headers the gateway explicitly chooses to forward (e.g. a verified Authorization) — never a raw passthrough of client headers. */
   readonly headers?: Readonly<Record<string, string>>;
 }
 

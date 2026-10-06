@@ -18,7 +18,7 @@ export interface ProxyRouteConfig {
   /** Upstream path template — `:param` names must match `path`'s. */
   readonly upstreamPath: string;
   readonly target: UpstreamTarget;
-  /** When true, `fastify.authenticate` runs first and the verified user id is forwarded as `x-user-id`. */
+  /** When true, `fastify.authenticate` runs first and the original `Authorization` header is forwarded upstream. */
   readonly requiresAuth: boolean;
   readonly bodySchema?: object;
 }

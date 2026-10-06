@@ -1,11 +1,20 @@
 import { describe, expect, it } from "vitest";
-import { buildTestServer } from "./testServer.js";
-import { USER_ID_HEADER } from "../src/config/projects.config.js";
+import { buildTestServer, authHeaderFor } from "./testServer.js";
 
 describe("project routes", () => {
-  it("rejects any request without the trusted x-user-id header", async () => {
+  it("rejects a request with no Authorization header", async () => {
     const app = buildTestServer();
     const response = await app.inject({ method: "GET", url: "/projects" });
+    expect(response.statusCode).toBe(401);
+  });
+
+  it("rejects a request with a malformed/invalid bearer token", async () => {
+    const app = buildTestServer();
+    const response = await app.inject({
+      method: "GET",
+      url: "/projects",
+      headers: { authorization: "Bearer not-a-real-token" },
+    });
     expect(response.statusCode).toBe(401);
   });
 
@@ -14,7 +23,7 @@ describe("project routes", () => {
     const created = await app.inject({
       method: "POST",
       url: "/projects",
-      headers: { [USER_ID_HEADER]: "user-1" },
+      headers: authHeaderFor("user-1"),
       payload: { name: "Mi diagrama", dslSource: "c1 = crear_circulo(radio=1, x=0, y=0);" },
     });
     expect(created.statusCode).toBe(201);
@@ -22,14 +31,14 @@ describe("project routes", () => {
     const ownerList = await app.inject({
       method: "GET",
       url: "/projects",
-      headers: { [USER_ID_HEADER]: "user-1" },
+      headers: authHeaderFor("user-1"),
     });
     expect(ownerList.json().projects).toHaveLength(1);
 
     const otherUserList = await app.inject({
       method: "GET",
       url: "/projects",
-      headers: { [USER_ID_HEADER]: "user-2" },
+      headers: authHeaderFor("user-2"),
     });
     expect(otherUserList.json().projects).toHaveLength(0);
   });
@@ -39,7 +48,7 @@ describe("project routes", () => {
     const created = await app.inject({
       method: "POST",
       url: "/projects",
-      headers: { [USER_ID_HEADER]: "user-1" },
+      headers: authHeaderFor("user-1"),
       payload: { name: "Mi diagrama", dslSource: "x" },
     });
     const projectId = created.json().project.id;
@@ -47,7 +56,7 @@ describe("project routes", () => {
     const response = await app.inject({
       method: "GET",
       url: `/projects/${projectId}`,
-      headers: { [USER_ID_HEADER]: "user-2" },
+      headers: authHeaderFor("user-2"),
     });
     expect(response.statusCode).toBe(404);
   });
@@ -57,7 +66,7 @@ describe("project routes", () => {
     const created = await app.inject({
       method: "POST",
       url: "/projects",
-      headers: { [USER_ID_HEADER]: "user-1" },
+      headers: authHeaderFor("user-1"),
       payload: { name: "Original", dslSource: "x" },
     });
     const projectId = created.json().project.id;
@@ -65,7 +74,7 @@ describe("project routes", () => {
     const updated = await app.inject({
       method: "PUT",
       url: `/projects/${projectId}`,
-      headers: { [USER_ID_HEADER]: "user-1" },
+      headers: authHeaderFor("user-1"),
       payload: { name: "Renombrado" },
     });
 
@@ -78,7 +87,7 @@ describe("project routes", () => {
     const created = await app.inject({
       method: "POST",
       url: "/projects",
-      headers: { [USER_ID_HEADER]: "user-1" },
+      headers: authHeaderFor("user-1"),
       payload: { name: "Original", dslSource: "x" },
     });
     const projectId = created.json().project.id;
@@ -86,7 +95,7 @@ describe("project routes", () => {
     const response = await app.inject({
       method: "PUT",
       url: `/projects/${projectId}`,
-      headers: { [USER_ID_HEADER]: "user-2" },
+      headers: authHeaderFor("user-2"),
       payload: { name: "Hackeado" },
     });
 
@@ -98,7 +107,7 @@ describe("project routes", () => {
     const created = await app.inject({
       method: "POST",
       url: "/projects",
-      headers: { [USER_ID_HEADER]: "user-1" },
+      headers: authHeaderFor("user-1"),
       payload: { name: "Original", dslSource: "x" },
     });
     const projectId = created.json().project.id;
@@ -106,14 +115,14 @@ describe("project routes", () => {
     const deleted = await app.inject({
       method: "DELETE",
       url: `/projects/${projectId}`,
-      headers: { [USER_ID_HEADER]: "user-1" },
+      headers: authHeaderFor("user-1"),
     });
     expect(deleted.statusCode).toBe(204);
 
     const getAfterDelete = await app.inject({
       method: "GET",
       url: `/projects/${projectId}`,
-      headers: { [USER_ID_HEADER]: "user-1" },
+      headers: authHeaderFor("user-1"),
     });
     expect(getAfterDelete.statusCode).toBe(404);
   });

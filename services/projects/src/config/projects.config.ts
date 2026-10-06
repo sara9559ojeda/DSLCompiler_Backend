@@ -1,7 +1,5 @@
 import "dotenv/config";
 
-export { USER_ID_HEADER } from "@compiler-img/shared";
-
 export const HTTP_PORT = Number(process.env.PORT ?? 4003);
 export const HTTP_HOST = process.env.HOST ?? "0.0.0.0";
 

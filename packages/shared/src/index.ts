@@ -24,7 +24,6 @@ export {
   type LoginRequestBody,
   type CreateProjectRequestBody,
   type UpdateProjectRequestBody,
-  USER_ID_HEADER,
 } from "./contracts/ProjectsContract.js";
 export {
   SuggestRequestSchema,

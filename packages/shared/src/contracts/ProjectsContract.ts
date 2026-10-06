@@ -34,11 +34,3 @@ export const UpdateProjectRequestSchema = Type.Object({
   dslSource: Type.Optional(Type.String()),
 });
 export type UpdateProjectRequestBody = Static<typeof UpdateProjectRequestSchema>;
-
-/**
- * Trusted internal header the gateway sets, carrying the user id it just
- * verified from the caller's JWT. The Projects service reads it instead of
- * verifying the token a second time — it's only reachable through the
- * gateway. Shared here so both sides use the exact same header name.
- */
-export const USER_ID_HEADER = "x-user-id";

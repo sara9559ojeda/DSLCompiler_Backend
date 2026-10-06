@@ -1,8 +1,9 @@
 # @compiler-img/projects
 
 Persistencia de cuentas y proyectos guardados. Node.js + Fastify + Prisma +
-PostgreSQL. Solo alcanzable a través del [gateway](../../apps/gateway) — en
-`docker-compose` vive en la red interna, sin puerto público.
+PostgreSQL. Pensado para alcanzarse a través del
+[gateway](../../apps/gateway), pero **nunca asume que es así** — ver
+"Autenticación" abajo.
 
 ## Rutas
 
@@ -10,22 +11,27 @@ PostgreSQL. Solo alcanzable a través del [gateway](../../apps/gateway) — en
 |---|---|---|---|
 | POST | `/auth/register` | — | Crea una cuenta, devuelve un JWT |
 | POST | `/auth/login` | — | Verifica credenciales, devuelve un JWT |
-| GET | `/projects` | `x-user-id` | Lista los proyectos del usuario |
-| POST | `/projects` | `x-user-id` | Crea un proyecto (`name`, `dslSource`) |
-| GET | `/projects/:id` | `x-user-id` | Obtiene un proyecto propio |
-| PUT | `/projects/:id` | `x-user-id` | Actualiza `name`/`dslSource` |
-| DELETE | `/projects/:id` | `x-user-id` | Elimina un proyecto propio |
+| GET | `/projects` | JWT | Lista los proyectos del usuario |
+| POST | `/projects` | JWT | Crea un proyecto (`name`, `dslSource`) |
+| GET | `/projects/:id` | JWT | Obtiene un proyecto propio |
+| PUT | `/projects/:id` | JWT | Actualiza `name`/`dslSource` |
+| DELETE | `/projects/:id` | JWT | Elimina un proyecto propio |
 
-## Por qué no verifica el JWT él mismo
+Las rutas marcadas "JWT" requieren `Authorization: Bearer <token>`.
 
-El gateway ya verifica el token (`@fastify/jwt`) antes de reenviar cualquier
-request hacia aquí, y agrega el header interno `x-user-id` con el id ya
-verificado (ver `apps/gateway/src/routes/registerProxyRoutes.ts`). Este
-servicio solo confía en ese header — nunca se expone públicamente, así que
-nada más puede alcanzarlo sin pasar primero por esa verificación. Esto
-evita duplicar la lógica de JWT en dos servicios (`USER_ID_HEADER` está
-centralizado en `@compiler-img/shared` para que ambos lados usen
-exactamente el mismo nombre de header).
+## Autenticación: verifica el JWT él mismo
+
+Este servicio **verifica el token por su cuenta** (`ITokenService.verify()`,
+`JwtTokenService`, mismo `JWT_SECRET` que el gateway) — no confía en ningún
+header puesto por otro servicio. El gateway también verifica el JWT antes
+de reenviar (rechazo rápido en el borde) y reenvía el `Authorization`
+original tal cual; `projects` lo vuelve a verificar de forma
+independiente. Es defensa en profundidad a propósito: en
+`docker-compose.yml` este servicio vive en la red interna sin puerto
+público, pero en despliegues donde eso no es posible (ver
+[docs/deploy-render.md](../../docs/deploy-render.md)) sigue siendo seguro
+alcanzarlo directamente — ver
+[ADR 0007](../../docs/adr/0007-public-services-with-self-verified-auth.md).
 
 ## Desarrollo
 
