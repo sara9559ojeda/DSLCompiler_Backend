@@ -3,9 +3,16 @@
   "version": "0.1.0",
   "private": true,
   "description": "DSL compiler core: Lexer, Parser, SemanticAnalyzer, CodeGenerator. Pure TypeScript, no Node built-ins — safe for the browser and any Node service alike.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sara9559ojeda/DSLCompiler.git",
+    "directory": "packages/compiler-core"
+  },
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "files": ["dist"],
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
