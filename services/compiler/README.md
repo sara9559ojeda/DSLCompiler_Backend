@@ -1,9 +1,16 @@
 # @compiler-img/compiler
 
-Núcleo del compilador: Lexer → Parser → AST → SemanticAnalyzer →
-CodeGenerator. Ver [`docs/grammar.md`](../../docs/grammar.md) para la
-gramática formal y [`docs/adr/`](../../docs/adr) para las decisiones de
-diseño.
+Servidor HTTP + CLI del compilador. El pipeline en sí (Lexer → Parser →
+AST → SemanticAnalyzer → CodeGenerator) vive en
+[`@compiler-img/compiler-core`](../../packages/compiler-core) — un paquete
+separado, sin dependencias de Node, publicado en npm, para que el frontend
+pueda usarlo directo en el navegador sin arrastrar `sharp`/`fastify`. Este
+paquete solo agrega lo que sí necesita un backend: el servidor Fastify, el
+CLI, y la exportación a PNG (`sharp`). Ver
+[ADR 0008](../../docs/adr/0008-extract-compiler-core-package.md) para el
+porqué del split, [`docs/grammar.md`](../../docs/grammar.md) para la
+gramática formal y [`docs/adr/`](../../docs/adr) para el resto de
+decisiones de diseño.
 
 ## Desarrollo
 
