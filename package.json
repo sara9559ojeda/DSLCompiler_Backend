@@ -11,8 +11,9 @@
   ],
   "scripts": {
     "build:shared": "npm run build --workspace=packages/shared",
+    "build:compiler-core": "npm run build --workspace=packages/compiler-core",
     "build:compiler": "npm run build --workspace=services/compiler",
-    "build:deps": "npm run build:shared && npm run build:compiler",
+    "build:deps": "npm run build:shared && npm run build:compiler-core && npm run build:compiler",
     "build": "npm run build:deps && npm run build --workspaces --if-present",
     "test": "npm run build:deps && npm run test --workspaces --if-present",
     "typecheck": "npm run build:deps && npm run typecheck --workspaces --if-present",
