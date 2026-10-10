@@ -1,10 +1,14 @@
 /**
- * Browser-safe entry point. Deliberately excludes ./index.ts's export/*
- * re-exports (SvgExporter/PngExporter) — PngExporter dynamically imports
- * `sharp`, a native Node addon, which must never end up in a browser bundle.
- * The frontend's compile-preview Web Worker imports from here so it runs
- * the exact same Lexer/Parser/SemanticAnalyzer/CodeGenerator as the backend
- * compiler service, just without the Node-only export path.
+ * Public surface of the compiler core: Lexer → Parser → SemanticAnalyzer →
+ * CodeGenerator → SVG. Pure TypeScript, zero Node built-ins — safe to import
+ * from a browser bundle (apps/web's Web Worker) or any Node service alike
+ * (services/compiler's HTTP server, services/ai-assist's validator).
+ *
+ * Deliberately excludes export/* (SvgExporter/PngExporter) and anything
+ * HTTP-related — those stay in services/compiler. PngExporter in particular
+ * dynamically imports `sharp`, a native Node addon that must never end up
+ * in a browser bundle; keeping it out of this package is what makes that
+ * package safe to `npm install` from a frontend repo.
  */
 import { SHAPE_DEFINITIONS, NAMED_COLORS } from "@compiler-img/shared";
 import { DefaultShapeRegistry } from "./semantic/ShapeRegistry.js";
