@@ -5,7 +5,7 @@ import {
   type CompileRequestBody,
   type ExportRequestBody,
 } from "@compiler-img/shared";
-import { EXPORT_CONTENT_TYPES } from "../config/compiler.config.js";
+import { EXPORT_CONTENT_TYPES } from "../config/http.config.js";
 import { createDefaultPipeline } from "../index.js";
 import { SvgExporter } from "../export/SvgExporter.js";
 import { PngExporter } from "../export/PngExporter.js";
