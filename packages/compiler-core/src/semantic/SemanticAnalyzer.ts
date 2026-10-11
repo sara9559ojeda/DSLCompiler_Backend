@@ -1,4 +1,5 @@
-import type { Diagnostic, ShapeDefinition, SourcePosition } from "@compiler-img/shared";
+import type { Diagnostic, SourcePosition } from "../diagnostics/Diagnostic.js";
+import type { ShapeDefinition } from "../registry/ShapeDefinition.js";
 import { CANVAS_WIDTH, CANVAS_HEIGHT, MAX_STATEMENTS_PER_PROGRAM } from "../config/compiler.config.js";
 import type { ProgramNode } from "../ast/nodes/ProgramNode.js";
 import type { StatementNode } from "../ast/nodes/StatementNode.js";

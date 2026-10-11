@@ -1,4 +1,4 @@
-import type { ShapeDefinition } from "@compiler-img/shared";
+import type { ShapeDefinition } from "../registry/ShapeDefinition.js";
 
 /**
  * Narrow, read-only lookup contract — the SemanticAnalyzer depends on this
