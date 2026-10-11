@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { SHAPE_DEFINITIONS } from "@compiler-img/shared";
+import { SHAPE_DEFINITIONS } from "@compiler-img/compiler-core";
 import { buildGrammarContext } from "../src/prompts/buildGrammarContext.js";
 
 describe("buildGrammarContext", () => {
