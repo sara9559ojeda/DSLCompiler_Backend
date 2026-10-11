@@ -1,4 +1,4 @@
-import type { Diagnostic } from "@compiler-img/shared";
+import type { Diagnostic } from "../diagnostics/Diagnostic.js";
 import { Token } from "./Token.js";
 import { TokenType } from "./TokenType.js";
 
