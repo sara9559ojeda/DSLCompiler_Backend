@@ -1,10 +1,10 @@
-# Render Blueprint — deploys the full stack in one shot.
+# Render Blueprint — deploys the backend (gateway + services + Postgres).
+# The frontend lives in its own repo and deploys to Vercel separately.
 #
 # Usage: push this repo to GitHub/GitLab, then in the Render dashboard
-# choose "New > Blueprint" and point it at the repo. Full walkthrough,
-# including the two values you must fill in by hand after the first
-# deploy (GATEWAY_URL, CORS_ORIGIN — Render's public URL isn't known
-# until a service is actually created), in docs/deploy-render.md.
+# choose "New > Blueprint" and point it at the repo. Full walkthrough in
+# docs/deploy-render.md. CORS_ORIGIN below assumes the frontend's Vercel
+# URL — update it (and push) if that URL ever changes.
 #
 # All 4 services are `type: web` (Render's Private Services feature —
 # which the original design used for compiler/projects/ai-assist — isn't
@@ -115,8 +115,8 @@ services:
         value: https://compiler-img-projects.onrender.com
       - key: AI_SERVICE_URL
         value: https://compiler-img-ai-assist.onrender.com
-      # Render's public URL for *this* service isn't knowable until after
-      # it's created — set manually once in the dashboard (see deploy guide).
+      # The frontend's real deployed URL (Vercel) — update here (and push)
+      # if it ever changes, instead of editing the dashboard by hand.
       - key: CORS_ORIGIN
-        sync: false
+        value: https://dslcompiler-web.vercel.app
 

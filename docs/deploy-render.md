@@ -24,36 +24,27 @@ gh repo create <tu-usuario>/compiler-img --private --source=. --push
 1. En el dashboard de Render: **New > Blueprint**.
 2. Elegí el repositorio que acabás de pushear. Render detecta `render.yaml`
    automáticamente.
-3. Te va a pedir valores para las variables marcadas `sync: false` en
-   `render.yaml`:
-   - `compiler-img-ai-assist` → `ANTHROPIC_API_KEY`: tu API key real (o
-     dejala vacía por ahora — `/api/ai/*` va a responder con un 500
-     enmascarado hasta que la cargues, el resto del sistema funciona igual).
-   - `compiler-img-gateway` → `CORS_ORIGIN`: poné un placeholder por ahora
-     (ver paso 4), por ejemplo la URL del deploy de Render del repo del
-     frontend.
+3. Te va a pedir un valor para la única variable marcada `sync: false`:
+   `compiler-img-ai-assist` → `ANTHROPIC_API_KEY` (tu API key real, o
+   dejala vacía por ahora — `/api/ai/*` va a responder con un 500
+   enmascarado hasta que la cargues, el resto del sistema funciona igual).
 4. Confirmá — Render crea la base de datos primero, después construye y
    levanta los 4 servicios.
 
-## 3. Corregir las dos URLs placeholder (paso obligatorio)
+`CORS_ORIGIN` (en `compiler-img-gateway`) y las tres URLs de
+`COMPILER_SERVICE_URL`/`PROJECTS_SERVICE_URL`/`AI_SERVICE_URL` ya están
+en `render.yaml` apuntando al dominio real de este despliegue
+(`compiler-img-*.onrender.com` y el frontend en Vercel) — no son
+placeholders. Si alguna vez el nombre de un servicio choca con otra
+cuenta de Render, o el frontend se muda a otro dominio, corregí el valor
+correspondiente en `render.yaml` y empujá — el Blueprint lo vuelve a
+sincronizar solo.
 
-Render no sabe la URL pública real de un servicio hasta que lo crea, así
-que el placeholder del paso 3 es una suposición inicial. Una vez que el
-primer deploy termina:
-
-1. Abrí **compiler-img-gateway** en el dashboard → copiá su URL pública
-   real (arriba del todo de la página del servicio). Esa es la URL que el
-   repo del frontend necesita como `GATEWAY_URL`.
-2. Una vez que el frontend esté desplegado y tengas su URL pública real,
-   volvé a **compiler-img-gateway** → **Environment** → actualizá
-   `CORS_ORIGIN` con esa URL.
-3. Cada cambio de variable dispara un redeploy automático de ese servicio.
-
-## 4. Verificar
+## 3. Verificar
 
 ```bash
-curl https://<tu-gateway>.onrender.com/health
-curl -X POST https://<tu-gateway>.onrender.com/api/compile \
+curl https://compiler-img-gateway.onrender.com/health
+curl -X POST https://compiler-img-gateway.onrender.com/api/compile \
   -H "Content-Type: application/json" \
   -d '{"source":"c1 = crear_circulo(radio=50, color=rojo, x=100, y=100);"}'
 ```
