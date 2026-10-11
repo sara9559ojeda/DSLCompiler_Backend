@@ -1,4 +1,4 @@
-import type { ParamDefinition, ShapeDefinition } from "@compiler-img/compiler-core";
+import type { ParamDefinition, ShapeDefinition } from "@saramariaojeda9559/compiler-core";
 
 function describeParam(param: ParamDefinition): string {
   const requirement = param.required

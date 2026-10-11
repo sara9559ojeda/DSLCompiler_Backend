@@ -55,7 +55,7 @@ todos verificados corriendo de verdad — no solo escritos.
 ```
 packages/shared         Tipos + catálogo de figuras/colores + contratos HTTP (fuente de verdad del DSL)
 packages/compiler-core  El compilador en sí (Lexer→Parser→SemanticAnalyzer→CodeGenerator), publicable en npm — sin deps de Node
-services/compiler       Servidor HTTP + CLI + exportación PNG (sharp), sobre @compiler-img/compiler-core
+services/compiler       Servidor HTTP + CLI + exportación PNG (sharp), sobre @saramariaojeda9559/compiler-core
 services/projects       Cuentas + proyectos guardados (Fastify + Prisma + PostgreSQL)
 services/ai-assist  Sugerencias de DSL y explicación de errores vía Claude (Fastify + SDK de Anthropic)
 apps/gateway        Único punto de entrada público: auth, rate limit, validación, proxy

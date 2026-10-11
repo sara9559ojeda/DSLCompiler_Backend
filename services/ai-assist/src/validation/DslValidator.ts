@@ -1,4 +1,4 @@
-import { createDefaultPipeline } from "@compiler-img/compiler-core";
+import { createDefaultPipeline } from "@saramariaojeda9559/compiler-core";
 import type { IDslValidator, ValidationResult } from "./IDslValidator.js";
 
 /**

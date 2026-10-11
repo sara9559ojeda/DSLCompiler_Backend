@@ -2,7 +2,7 @@
 
 Servidor HTTP + CLI del compilador. El pipeline en sí (Lexer → Parser →
 AST → SemanticAnalyzer → CodeGenerator) vive en
-[`@compiler-img/compiler-core`](../../packages/compiler-core) — un paquete
+[`@saramariaojeda9559/compiler-core`](../../packages/compiler-core) — un paquete
 separado, sin dependencias de Node, publicado en npm, para que el frontend
 pueda usarlo directo en el navegador sin arrastrar `sharp`/`fastify`. Este
 paquete solo agrega lo que sí necesita un backend: el servidor Fastify, el

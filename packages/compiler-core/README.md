@@ -1,4 +1,4 @@
-# @compiler-img/compiler-core
+# @saramariaojeda9559/compiler-core
 
 El compilador en sí: Lexer → Parser → AST → SemanticAnalyzer →
 CodeGenerator → SVG. Cero dependencias de Node — se importa igual desde un
@@ -12,7 +12,7 @@ DSL.
 ## Uso
 
 ```ts
-import { createDefaultPipeline } from "@compiler-img/compiler-core";
+import { createDefaultPipeline } from "@saramariaojeda9559/compiler-core";
 
 const result = createDefaultPipeline().compile(source);
 if (result.success) {

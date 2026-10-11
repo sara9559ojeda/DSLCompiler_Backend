@@ -1,4 +1,4 @@
-import type { Diagnostic } from "@compiler-img/compiler-core";
+import type { Diagnostic } from "@saramariaojeda9559/compiler-core";
 import type { IClaudeClient } from "../claude/IClaudeClient.js";
 import type { IDslValidator } from "../validation/IDslValidator.js";
 import { extractDslCode } from "../prompts/extractDslCode.js";

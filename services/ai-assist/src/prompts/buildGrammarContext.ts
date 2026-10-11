@@ -1,4 +1,4 @@
-import { SHAPE_DEFINITIONS, NAMED_COLORS } from "@compiler-img/compiler-core";
+import { SHAPE_DEFINITIONS, NAMED_COLORS } from "@saramariaojeda9559/compiler-core";
 import { describeShape } from "./describeShape.js";
 
 /**

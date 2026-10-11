@@ -1,4 +1,4 @@
-import type { Diagnostic } from "@compiler-img/compiler-core";
+import type { Diagnostic } from "@saramariaojeda9559/compiler-core";
 
 export interface ValidationResult {
   readonly success: boolean;

@@ -1,4 +1,4 @@
-import type { Diagnostic } from "@compiler-img/compiler-core";
+import type { Diagnostic } from "@saramariaojeda9559/compiler-core";
 
 /** Fed back to Claude when its first attempt fails to compile — grounds the retry in the real errors. */
 export function buildRetryPrompt(

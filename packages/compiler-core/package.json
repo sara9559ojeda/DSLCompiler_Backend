@@ -1,7 +1,9 @@
 {
-  "name": "@compiler-img/compiler-core",
+  "name": "@saramariaojeda9559/compiler-core",
   "version": "0.1.0",
-  "private": true,
+  "publishConfig": {
+    "access": "public"
+  },
   "description": "DSL compiler core: Lexer, Parser, SemanticAnalyzer, CodeGenerator. Pure TypeScript, no Node built-ins — safe for the browser and any Node service alike.",
   "license": "MIT",
   "repository": {

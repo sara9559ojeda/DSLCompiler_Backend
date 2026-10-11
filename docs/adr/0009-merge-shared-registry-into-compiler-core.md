@@ -34,7 +34,7 @@ dependencia de Git.
 
 `services/ai-assist` (que sí necesitaba el registro de figuras para
 construir el prompt del modelo) pasa a importar `SHAPE_DEFINITIONS`,
-`NAMED_COLORS`, etc. desde `@compiler-img/compiler-core` en vez de
+`NAMED_COLORS`, etc. desde `@saramariaojeda9559/compiler-core` en vez de
 `@compiler-img/shared` — sigue siendo workspace-local, solo cambió de
 paquete.
 
@@ -48,10 +48,10 @@ paquete.
   siendo frágil. Lo robusto es que el paquete externo no dependa de nada
   interno.
 - `apps/web` ya no importa `@compiler-img/shared` en ningún lado —
-  depende únicamente de `@compiler-img/compiler-core`. Confirmado con
+  depende únicamente de `@saramariaojeda9559/compiler-core`. Confirmado con
   `grep -r "@compiler-img/shared" apps/web/src` → sin resultados.
 - Verificado con una instalación real (`npm install` en un directorio
-  temporal, con `"@compiler-img/compiler-core":
+  temporal, con `"@saramariaojeda9559/compiler-core":
   "github:sara9559ojeda/DSLCompiler#path:packages/compiler-core"` como
   única dependencia) antes de dar esto por resuelto — no alcanza con que
   compile en el monorepo.
