@@ -6,7 +6,7 @@
 # deploy (GATEWAY_URL, CORS_ORIGIN — Render's public URL isn't known
 # until a service is actually created), in docs/deploy-render.md.
 #
-# All 5 services are `type: web` (Render's Private Services feature —
+# All 4 services are `type: web` (Render's Private Services feature —
 # which the original design used for compiler/projects/ai-assist — isn't
 # available on every workspace plan). Because `projects` may be reached
 # directly instead of only through the gateway, it verifies the JWT itself
@@ -115,16 +115,3 @@ services:
       - key: CORS_ORIGIN
         sync: false
 
-  - type: web
-    name: compiler-img-web
-    runtime: docker
-    dockerfilePath: ./apps/web/Dockerfile
-    dockerContext: .
-    plan: free
-    envVars:
-      # Resolved at container *start*, not build time (see
-      # apps/web/docker/runtime-config-entrypoint.sh) — the browser's own
-      # URL for the gateway. Same chicken-and-egg as CORS_ORIGIN above:
-      # fill in with compiler-img-gateway's actual public URL once known.
-      - key: GATEWAY_URL
-        sync: false

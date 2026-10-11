@@ -92,18 +92,6 @@ services:
     depends_on: [compiler, projects, ai-assist]
     networks: [internal]
 
-  web:
-    build:
-      context: .
-      dockerfile: apps/web/Dockerfile
-    environment:
-      # Resolved at container *start* (see docker/runtime-config-entrypoint.sh),
-      # not baked in at build time — the browser's own URL for the gateway.
-      GATEWAY_URL: ${PUBLIC_GATEWAY_URL:-http://localhost:4000}
-    ports:
-      - "8080:80"
-    depends_on: [gateway]
-    networks: [internal]
 
 networks:
   internal:

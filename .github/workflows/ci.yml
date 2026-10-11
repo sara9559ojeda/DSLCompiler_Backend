@@ -37,24 +37,17 @@ jobs:
       - name: Unit & integration tests
         run: npm test
 
-  # Builds every Dockerfile, brings the full stack up with docker-compose
-  # (Postgres included), and runs Playwright against the real, composed
-  # production build — nothing here is mocked. Only runs once `test` passes,
-  # so a broken lint/typecheck/unit-test never wastes a Docker build.
+  # Builds every Dockerfile and brings the backend stack up with
+  # docker-compose (Postgres included) — nothing here is mocked. Only runs
+  # once `test` passes, so a broken lint/typecheck/unit-test never wastes a
+  # Docker build. The frontend's own e2e suite (Playwright against this
+  # gateway) lives in its own repo now — see docs/adr/0010-split-frontend-repo.md.
   e2e:
-    name: Build Docker images + e2e against docker-compose
+    name: Build Docker images + smoke test the composed stack
     runs-on: ubuntu-latest
     needs: test
     steps:
       - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: npm
-
-      - name: Install dependencies (for the Playwright CLI)
-        run: npm ci
 
       - name: Create the docker-compose .env
         run: cp .env.example .env
@@ -66,7 +59,7 @@ jobs:
         run: docker compose up -d
         env:
           # Optional: set an ANTHROPIC_API_KEY repo secret to also exercise
-          # /api/ai/* for real. The e2e suite doesn't depend on it either way.
+          # /api/ai/* for real. The smoke test doesn't depend on it either way.
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
 
       - name: Wait for the gateway to become healthy
@@ -82,19 +75,9 @@ jobs:
           docker compose logs
           exit 1
 
-      - name: Run Playwright e2e tests
-        working-directory: apps/web
-        run: npx playwright test
-        env:
-          E2E_BASE_URL: http://localhost:8080
-
-      - name: Upload Playwright report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: playwright-report
-          path: apps/web/playwright-report/
-          retention-days: 7
+      - name: Smoke test /api/compile through the gateway
+        run: |
+          curl -sf -X POST http://localhost:4000/api/compile             -H "content-type: application/json"             -d '{"source":"c1 = crear_circulo(radio=50, color=rojo, x=10, y=10);"}'             | grep -q '"success":true'
 
       - name: Dump service logs on failure
         if: failure()

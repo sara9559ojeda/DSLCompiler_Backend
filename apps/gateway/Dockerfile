@@ -7,7 +7,6 @@ COPY services/compiler/package.json services/compiler/package.json
 COPY services/projects/package.json services/projects/package.json
 COPY services/ai-assist/package.json services/ai-assist/package.json
 COPY apps/gateway/package.json apps/gateway/package.json
-COPY apps/web/package.json apps/web/package.json
 RUN npm ci
 
 FROM deps AS build
@@ -24,7 +23,6 @@ COPY services/compiler/package.json services/compiler/package.json
 COPY services/projects/package.json services/projects/package.json
 COPY services/ai-assist/package.json services/ai-assist/package.json
 COPY apps/gateway/package.json apps/gateway/package.json
-COPY apps/web/package.json apps/web/package.json
 RUN npm ci --omit=dev
 
 FROM node:20-slim AS runtime

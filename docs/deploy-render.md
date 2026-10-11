@@ -1,9 +1,10 @@
 # Desplegar en Render
 
 Usa [`render.yaml`](../render.yaml) (un "Blueprint" de Render) para crear
-los 5 servicios + la base de datos de un solo golpe, a partir de los mismos
-Dockerfiles que ya usa `docker-compose.yml` — no hay nada nuevo que
-mantener.
+los 4 servicios de backend + la base de datos de un solo golpe, a partir de
+los mismos Dockerfiles que ya usa `docker-compose.yml` — no hay nada nuevo
+que mantener. El frontend (`apps/web`) vive en su propio repositorio y se
+despliega por separado — ver su propia guía de despliegue en ese repo.
 
 ## 1. Pushear el repo a GitHub
 
@@ -29,30 +30,24 @@ gh repo create <tu-usuario>/compiler-img --private --source=. --push
      dejala vacía por ahora — `/api/ai/*` va a responder con un 500
      enmascarado hasta que la cargues, el resto del sistema funciona igual).
    - `compiler-img-gateway` → `CORS_ORIGIN`: poné un placeholder por ahora
-     (ver paso 4), por ejemplo `https://compiler-img-web.onrender.com`.
-   - `compiler-img-web` → `GATEWAY_URL`: mismo caso, poné
-     `https://compiler-img-gateway.onrender.com` como placeholder.
+     (ver paso 4), por ejemplo la URL del deploy de Render del repo del
+     frontend.
 4. Confirmá — Render crea la base de datos primero, después construye y
-   levanta los 5 servicios.
+   levanta los 4 servicios.
 
 ## 3. Corregir las dos URLs placeholder (paso obligatorio)
 
 Render no sabe la URL pública real de un servicio hasta que lo crea, así
-que las dos variables del paso 3 son una suposición inicial basada en la
-convención `https://<nombre-del-servicio>.onrender.com`. Una vez que el
+que el placeholder del paso 3 es una suposición inicial. Una vez que el
 primer deploy termina:
 
 1. Abrí **compiler-img-gateway** en el dashboard → copiá su URL pública
-   real (arriba del todo de la página del servicio).
-2. Abrí **compiler-img-web** → **Environment** → actualizá `GATEWAY_URL`
-   con esa URL (si no coincidía con el placeholder).
-3. Abrí **compiler-img-gateway** → **Environment** → actualizá
-   `CORS_ORIGIN` con la URL pública real de **compiler-img-web**.
-4. Cada cambio de variable dispara un redeploy automático de ese servicio.
-
-Si los nombres de los servicios no chocaron con otra cuenta de Render, los
-placeholders del paso 3 ya van a ser correctos y este paso es solo
-verificar — pero no asumas que lo son sin mirar.
+   real (arriba del todo de la página del servicio). Esa es la URL que el
+   repo del frontend necesita como `GATEWAY_URL`.
+2. Una vez que el frontend esté desplegado y tengas su URL pública real,
+   volvé a **compiler-img-gateway** → **Environment** → actualizá
+   `CORS_ORIGIN` con esa URL.
+3. Cada cambio de variable dispara un redeploy automático de ese servicio.
 
 ## 4. Verificar
 
@@ -63,13 +58,10 @@ curl -X POST https://<tu-gateway>.onrender.com/api/compile \
   -d '{"source":"c1 = crear_circulo(radio=50, color=rojo, x=100, y=100);"}'
 ```
 
-Y abrí `https://<tu-web>.onrender.com` en el navegador — debería compilar
-en vivo y permitir exportar SVG/PNG igual que en local.
-
 ## Qué es privado y qué es público
 
 A diferencia de `docker-compose.yml` (donde `compiler`/`projects`/
-`ai-assist` solo viven en la red interna de Docker), en Render **los 5
+`ai-assist` solo viven en la red interna de Docker), en Render **los 4
 servicios son `type: web`** — el plan de Render de esta cuenta no incluye
 Private Services (`type: pserv` falla con *"service type is not available
 for this plan"* al crear el Blueprint; si tu cuenta sí lo soporta, podés
@@ -91,11 +83,11 @@ nombre del servicio en `render.yaml` coincida exactamente con el que usan
 
 ## Antes de confirmar el Blueprint
 
-`render.yaml` pone `plan: free` en los 5 servicios y en la base de datos.
+`render.yaml` pone `plan: free` en los 4 servicios y en la base de datos.
 Los límites del plan gratuito de Render (cuántos servicios free simultáneos
 permite una cuenta, cuotas de horas/mes, etc.) cambian con el tiempo y
 dependen de tu cuenta — revisá el dashboard de Render antes de confirmar
-el Blueprint. Si no te deja crear los 5 como `free`, subí el `plan:` de
+el Blueprint. Si no te deja crear los 4 como `free`, subí el `plan:` de
 los que haga falta (p. ej. `starter`) directamente en `render.yaml` antes
 de pushear, o cambialo luego por servicio en el dashboard.
 
