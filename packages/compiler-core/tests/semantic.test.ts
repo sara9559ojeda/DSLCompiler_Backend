@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { SHAPE_DEFINITIONS, NAMED_COLORS, DEFAULT_SHAPE_COLOR } from "@compiler-img/shared";
+import { SHAPE_DEFINITIONS } from "../src/registry/shapes.config.js";
+import { NAMED_COLORS, DEFAULT_SHAPE_COLOR } from "../src/registry/colors.config.js";
 import { Lexer } from "../src/lexer/Lexer.js";
 import { Parser } from "../src/parser/Parser.js";
 import { SemanticAnalyzer } from "../src/semantic/SemanticAnalyzer.js";
