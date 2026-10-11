@@ -75,11 +75,15 @@ y `ai-assist` no manejan datos de usuario, así que ser públicos no abre un
 agujero equivalente (sí quedan sin el rate limiting del gateway si alguien
 les pega directo — ver [docs/security.md](security.md)).
 
-Si algo no conecta entre servicios, antes de tocar el código revisá que el
-nombre del servicio en `render.yaml` coincida exactamente con el que usan
-`COMPILER_SERVICE_URL` / `PROJECTS_SERVICE_URL` / `AI_SERVICE_URL` en
-`compiler-img-gateway` (el hostname interno de Render es literalmente el
-`name:` del servicio, aunque también tenga URL pública).
+El gateway llama a `compiler`/`projects`/`ai-assist` por su **URL pública
+HTTPS** (`https://<name>.onrender.com`), no por un hostname interno — ver
+[ADR 0011](adr/0011-gateway-calls-upstreams-by-public-url.md) (el
+hostname interno bare que documenta Render no resolvió en la práctica
+para `type: web` en este plan). Si algo no conecta entre servicios, antes
+de tocar el código revisá que `COMPILER_SERVICE_URL` /
+`PROJECTS_SERVICE_URL` / `AI_SERVICE_URL` en `compiler-img-gateway`
+coincidan con la URL pública real de cada servicio (visible arriba de su
+propia página en el dashboard).
 
 ## Antes de confirmar el Blueprint
 

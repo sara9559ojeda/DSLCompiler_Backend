@@ -1,5 +1,10 @@
 # ADR 0007: Servicios públicos en Render + verificación de JWT propia en `projects`
 
+> **Nota:** la decisión de verificar el JWT en `projects` sigue vigente.
+> El supuesto de que el gateway podía llamar a los servicios internos por
+> un hostname bare quedó invalidado al probarlo de verdad — ver
+> [ADR 0011](0011-gateway-calls-upstreams-by-public-url.md).
+
 ## Contexto
 
 [ADR 0004](0004-trusted-header-auth-between-gateway-and-services.md) asumía

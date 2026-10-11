@@ -100,16 +100,21 @@ services:
         value: 100
       - key: RATE_LIMIT_WINDOW_MS
         value: 60000
-      # Render gives every web/private service an internal hostname equal
-      # to its own `name:` field (bare, no scheme) — reachable from other
-      # services in the same account even though these three also have
-      # public URLs now. See docs/deploy-render.md.
+      # Render documents a bare-hostname internal address for every
+      # web/private service, but it did not resolve from `type: web`
+      # services on this plan in practice (verified: gateway -> compiler
+      # failed with "fetch failed" even with the env var correctly set and
+      # both services individually healthy) — see
+      # docs/adr/0011-gateway-calls-upstreams-by-public-url.md. Using each
+      # service's own public HTTPS URL instead, same convention-based
+      # caveat as GATEWAY_URL/CORS_ORIGIN below: only correct if the name
+      # wasn't already taken by another Render account.
       - key: COMPILER_SERVICE_URL
-        value: http://compiler-img-compiler:4001
+        value: https://compiler-img-compiler.onrender.com
       - key: PROJECTS_SERVICE_URL
-        value: http://compiler-img-projects:4003
+        value: https://compiler-img-projects.onrender.com
       - key: AI_SERVICE_URL
-        value: http://compiler-img-ai-assist:4004
+        value: https://compiler-img-ai-assist.onrender.com
       # Render's public URL for *this* service isn't knowable until after
       # it's created — set manually once in the dashboard (see deploy guide).
       - key: CORS_ORIGIN
