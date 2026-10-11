@@ -1,4 +1,4 @@
-import type { Diagnostic } from "@compiler-img/shared";
+import type { Diagnostic } from "@compiler-img/compiler-core";
 import type { IClaudeClient } from "../claude/IClaudeClient.js";
 import { buildExplainUserPrompt } from "../prompts/buildExplainUserPrompt.js";
 

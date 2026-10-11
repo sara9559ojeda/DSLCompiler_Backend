@@ -1,4 +1,4 @@
-import type { Diagnostic } from "@compiler-img/shared";
+import type { Diagnostic } from "@compiler-img/compiler-core";
 
 export function buildExplainUserPrompt(source: string, diagnostics: readonly Diagnostic[]): string {
   const numberedSource = source
