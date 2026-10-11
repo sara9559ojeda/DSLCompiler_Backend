@@ -1,4 +1,4 @@
-import type { Diagnostic } from "@compiler-img/shared";
+import type { Diagnostic } from "../diagnostics/Diagnostic.js";
 import type { Token } from "../lexer/Token.js";
 import { TokenType } from "../lexer/TokenType.js";
 import { ProgramNode } from "../ast/nodes/ProgramNode.js";

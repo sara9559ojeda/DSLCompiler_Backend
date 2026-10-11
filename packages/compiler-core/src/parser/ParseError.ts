@@ -1,4 +1,4 @@
-import type { SourcePosition } from "@compiler-img/shared";
+import type { SourcePosition } from "../diagnostics/Diagnostic.js";
 
 /**
  * Internal control-flow signal only — the Parser always catches this itself
