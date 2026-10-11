@@ -1,4 +1,4 @@
-import { DEFAULT_STROKE_WIDTH } from "@compiler-img/shared";
+import { DEFAULT_STROKE_WIDTH } from "../registry/dsl-defaults.config.js";
 import { SVG_FONT_FAMILY, ARROW_LENGTH, ARROW_ANGLE_RADIANS } from "../config/compiler.config.js";
 import type { CanvasConfig, ResolvedConnection, ResolvedShape } from "../semantic/Scene.js";
 import type { IShapeRenderer } from "./IShapeRenderer.js";
