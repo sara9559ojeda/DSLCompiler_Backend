@@ -1,4 +1,4 @@
-import type { SourcePosition } from "@compiler-img/shared";
+import type { SourcePosition } from "../../diagnostics/Diagnostic.js";
 import type { ArgumentNode } from "./ArgumentNode.js";
 
 export class CommandCallNode {

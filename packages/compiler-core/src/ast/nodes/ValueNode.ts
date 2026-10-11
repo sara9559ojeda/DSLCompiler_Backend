@@ -1,4 +1,4 @@
-import type { SourcePosition } from "@compiler-img/shared";
+import type { SourcePosition } from "../../diagnostics/Diagnostic.js";
 
 /**
  * Visitor over the value-node hierarchy. This is the one place in the AST
