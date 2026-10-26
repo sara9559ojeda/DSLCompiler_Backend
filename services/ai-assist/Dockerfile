@@ -3,6 +3,7 @@ FROM node:20-slim AS deps
 WORKDIR /app
 COPY package.json package-lock.json tsconfig.base.json ./
 COPY packages/shared/package.json packages/shared/package.json
+COPY packages/grpc-contracts/package.json packages/grpc-contracts/package.json
 COPY packages/compiler-core/package.json packages/compiler-core/package.json
 COPY services/compiler/package.json services/compiler/package.json
 COPY services/projects/package.json services/projects/package.json
@@ -25,6 +26,7 @@ FROM node:20-slim AS prod-deps
 WORKDIR /app
 COPY package.json package-lock.json ./
 COPY packages/shared/package.json packages/shared/package.json
+COPY packages/grpc-contracts/package.json packages/grpc-contracts/package.json
 COPY packages/compiler-core/package.json packages/compiler-core/package.json
 COPY services/compiler/package.json services/compiler/package.json
 COPY services/projects/package.json services/projects/package.json

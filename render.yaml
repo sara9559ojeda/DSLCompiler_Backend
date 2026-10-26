@@ -43,6 +43,11 @@ services:
         value: 4001
       - key: HOST
         value: 0.0.0.0
+      # Render's public proxy only speaks HTTP/1.x to the container, so the
+      # gateway can't reach a gRPC port here; it uses the HTTP API instead
+      # (gateway's COMPILER_TRANSPORT defaults to http). See ADR 0012.
+      - key: GRPC_ENABLED
+        value: "false"
 
   - type: web
     name: compiler-img-projects

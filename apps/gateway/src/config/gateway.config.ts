@@ -20,3 +20,16 @@ export const UPSTREAM_TARGETS: Readonly<Record<UpstreamTarget, string>> = Object
   ai: process.env.AI_SERVICE_URL ?? "http://localhost:4002",
   projects: process.env.PROJECTS_SERVICE_URL ?? "http://localhost:4003",
 });
+
+/**
+ * How the gateway reaches the compiler service. "http" (default) keeps the
+ * plain fetch proxy; "grpc" calls CompilerService/ExportService v1 at
+ * COMPILER_GRPC_ADDRESS. gRPC needs end-to-end HTTP/2, so it's only usable
+ * where the two can talk privately (docker-compose, a private network) —
+ * see docs/adr/0012-grpc-between-gateway-and-compiler.md.
+ */
+export type CompilerTransport = "http" | "grpc";
+export const COMPILER_TRANSPORT: CompilerTransport = process.env.COMPILER_TRANSPORT === "grpc" ? "grpc" : "http";
+export const COMPILER_GRPC_ADDRESS = process.env.COMPILER_GRPC_ADDRESS ?? "localhost:50051";
+/** Per-call deadline; a slow compile/export fails fast with 504 instead of hanging the request. */
+export const GRPC_DEADLINE_MS = Number(process.env.GRPC_DEADLINE_MS ?? 5_000);

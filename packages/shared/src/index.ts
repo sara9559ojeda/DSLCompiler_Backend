@@ -1,4 +1,5 @@
 export {
+  MAX_SOURCE_LENGTH,
   CompileRequestSchema,
   ExportRequestSchema,
   type CompileRequestBody,

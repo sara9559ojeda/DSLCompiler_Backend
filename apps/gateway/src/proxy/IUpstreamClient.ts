@@ -1,6 +1,10 @@
+import type { UpstreamTarget } from "../config/gateway.config.js";
+
 export type UpstreamMethod = "GET" | "POST" | "PUT" | "DELETE";
 
 export interface UpstreamRequest {
+  /** Which service this is for — lets a routing client pick a transport per target (see TargetRoutingUpstreamClient). */
+  readonly target: UpstreamTarget;
   readonly baseUrl: string;
   readonly path: string;
   readonly method: UpstreamMethod;

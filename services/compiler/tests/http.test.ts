@@ -88,4 +88,26 @@ describe("Compiler HTTP server", () => {
     expect(response.statusCode).toBe(422);
     expect(response.json().diagnostics.length).toBeGreaterThan(0);
   });
+
+  it("POST /stages returns tokens, AST, IR and timings", async () => {
+    const app = buildServer();
+    const response = await app.inject({
+      method: "POST",
+      url: "/stages",
+      payload: { source: "c1 = crear_circulo(radio=10, x=0, y=0);" },
+    });
+
+    expect(response.statusCode).toBe(200);
+    const body = response.json();
+    expect(body.success).toBe(true);
+    expect(body.tokens.length).toBeGreaterThan(0);
+    expect(JSON.parse(body.astJson).node).toBe("ProgramNode");
+    expect(body.timings).toHaveLength(4);
+  });
+
+  it("POST /compile rejects a source over the size limit with 400", async () => {
+    const app = buildServer();
+    const response = await app.inject({ method: "POST", url: "/compile", payload: { source: "x".repeat(200_001) } });
+    expect(response.statusCode).toBe(400);
+  });
 });

@@ -1,0 +1,79 @@
+syntax = "proto3";
+
+// Contract-first definition of the compiler service. Breaking changes go
+// into a new package version (compiler.v2) — v1 fields are never renumbered
+// or repurposed, only added.
+package compiler.v1;
+
+service CompilerService {
+  // Full pipeline: lexer → parser → semantic analysis → SVG.
+  rpc Compile(CompileRequest) returns (CompileResponse);
+  // Lexer → parser → semantic analysis only; no SVG is generated.
+  rpc Analyze(AnalyzeRequest) returns (AnalyzeResponse);
+  // Every intermediate stage with its timing (tokens, AST, IR, SVG).
+  rpc GetCompilationStages(CompilationStagesRequest) returns (CompilationStagesResponse);
+}
+
+enum Severity {
+  SEVERITY_UNSPECIFIED = 0;
+  SEVERITY_ERROR = 1;
+  SEVERITY_WARNING = 2;
+}
+
+message SourcePosition {
+  uint32 line = 1;
+  uint32 column = 2;
+}
+
+message Diagnostic {
+  Severity severity = 1;
+  string message = 2;
+  SourcePosition position = 3;
+}
+
+message CompileRequest {
+  string source = 1;
+}
+
+message CompileResponse {
+  bool success = 1;
+  // Unset when success is false.
+  optional string svg = 2;
+  repeated Diagnostic diagnostics = 3;
+}
+
+message AnalyzeRequest {
+  string source = 1;
+}
+
+message AnalyzeResponse {
+  bool success = 1;
+  repeated Diagnostic diagnostics = 2;
+}
+
+message CompilationStagesRequest {
+  string source = 1;
+}
+
+message Token {
+  string type = 1;
+  string lexeme = 2;
+  SourcePosition position = 3;
+}
+
+message StageTiming {
+  string stage = 1;
+  double duration_ms = 2;
+}
+
+message CompilationStagesResponse {
+  bool success = 1;
+  repeated Token tokens = 2;
+  // The AST and the Scene IR are recursive/heterogeneous trees; they travel
+  // as JSON so the contract doesn't have to mirror every node type.
+  string ast_json = 3;
+  string scene_json = 4;
+  optional string svg = 5;
+  repeated Diagnostic diagnostics = 6;
+  repeated StageTiming timings = 7;
+}

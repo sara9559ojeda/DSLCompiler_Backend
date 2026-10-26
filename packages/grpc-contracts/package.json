@@ -1,0 +1,23 @@
+{
+  "name": "@compiler-img/grpc-contracts",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Protocol Buffers contracts (v1) for the compiler and export gRPC services, plus the typed loader both sides share.",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": ["dist", "proto"],
+  "scripts": {
+    "generate": "proto-loader-gen-types compiler/v1/compiler.proto export/v1/export.proto --grpcLib=@grpc/grpc-js --outDir=src/generated --longs=String --enums=String --defaults --oneofs --importFileExtension=.js --includeDirs=proto",
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "echo \"contract tests live in services/compiler and apps/gateway\""
+  },
+  "dependencies": {
+    "@grpc/grpc-js": "^1.14.6",
+    "@grpc/proto-loader": "^0.8.1"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3"
+  }
+}

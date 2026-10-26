@@ -5,19 +5,13 @@ import {
   type CompileRequestBody,
   type ExportRequestBody,
 } from "@compiler-img/shared";
-import { EXPORT_CONTENT_TYPES } from "../config/http.config.js";
-import { createDefaultPipeline } from "../index.js";
-import { SvgExporter } from "../export/SvgExporter.js";
-import { PngExporter } from "../export/PngExporter.js";
-import type { IExporter } from "../export/IExporter.js";
+import { CompilerApplication } from "../application/CompilerApplication.js";
 
 /**
- * Thin HTTP wrapper around CompilerPipeline. Every request builds its own
- * pipeline/exporter instance because SemanticAnalyzer holds per-compile
- * state (symbol table) — nothing here is shared, so there's no cross-request
- * contamination to worry about.
+ * HTTP adapter over CompilerApplication. All compile/export logic lives in
+ * the application layer, shared with the gRPC adapter (src/grpc/server.ts).
  */
-export function buildServer(): FastifyInstance {
+export function buildServer(app: CompilerApplication = new CompilerApplication()): FastifyInstance {
   const fastify = Fastify({ logger: false });
 
   fastify.get("/health", async () => ({ status: "ok" }));
@@ -25,27 +19,27 @@ export function buildServer(): FastifyInstance {
   fastify.post<{ Body: CompileRequestBody }>(
     "/compile",
     { schema: { body: CompileRequestSchema } },
-    async (request, reply) => {
-      const result = createDefaultPipeline().compile(request.body.source);
-      return reply.send(result);
-    },
+    async (request, reply) => reply.send(app.compile(request.body.source)),
+  );
+
+  fastify.post<{ Body: CompileRequestBody }>(
+    "/stages",
+    { schema: { body: CompileRequestSchema } },
+    async (request, reply) => reply.send(app.stages(request.body.source)),
   );
 
   fastify.post<{ Body: ExportRequestBody }>(
     "/export",
     { schema: { body: ExportRequestSchema } },
     async (request, reply) => {
-      const { source, format } = request.body;
-      const result = createDefaultPipeline().compile(source);
+      const outcome = await app.export(request.body.source, request.body.format);
 
-      if (!result.success || result.svg === null) {
-        return reply.status(422).send({ success: false, diagnostics: result.diagnostics });
+      if (!outcome.success) {
+        return reply.status(422).send({ success: false, diagnostics: outcome.diagnostics });
       }
 
-      const exporter: IExporter = format === "png" ? new PngExporter() : new SvgExporter();
-      const buffer = await exporter.export(result.svg);
-      reply.header("content-type", EXPORT_CONTENT_TYPES[format]);
-      return reply.send(buffer);
+      reply.header("content-type", outcome.contentType);
+      return reply.send(outcome.content);
     },
   );
 

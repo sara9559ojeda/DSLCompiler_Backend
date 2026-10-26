@@ -1,0 +1,41 @@
+syntax = "proto3";
+
+package export.v1;
+
+import "compiler/v1/compiler.proto";
+
+service ExportService {
+  rpc Export(ExportRequest) returns (ExportResponse);
+  rpc GetSupportedFormats(GetSupportedFormatsRequest) returns (GetSupportedFormatsResponse);
+}
+
+enum ExportFormat {
+  EXPORT_FORMAT_UNSPECIFIED = 0;
+  EXPORT_FORMAT_SVG = 1;
+  EXPORT_FORMAT_PNG = 2;
+}
+
+message ExportRequest {
+  string source = 1;
+  ExportFormat format = 2;
+}
+
+message ExportResponse {
+  // False when the source has compile errors; content is then empty and
+  // diagnostics explains why.
+  bool success = 1;
+  bytes content = 2;
+  string content_type = 3;
+  repeated compiler.v1.Diagnostic diagnostics = 4;
+}
+
+message GetSupportedFormatsRequest {}
+
+message SupportedFormat {
+  ExportFormat format = 1;
+  string content_type = 2;
+}
+
+message GetSupportedFormatsResponse {
+  repeated SupportedFormat formats = 1;
+}

@@ -5,6 +5,7 @@ FROM node:20-slim AS deps
 WORKDIR /app
 COPY package.json package-lock.json tsconfig.base.json ./
 COPY packages/shared/package.json packages/shared/package.json
+COPY packages/grpc-contracts/package.json packages/grpc-contracts/package.json
 COPY packages/compiler-core/package.json packages/compiler-core/package.json
 COPY services/compiler/package.json services/compiler/package.json
 COPY services/projects/package.json services/projects/package.json
@@ -14,9 +15,11 @@ RUN npm ci
 
 FROM deps AS build
 COPY packages/shared packages/shared
+COPY packages/grpc-contracts packages/grpc-contracts
 COPY packages/compiler-core packages/compiler-core
 COPY services/compiler services/compiler
 RUN npm run build --workspace=packages/shared \
+ && npm run build --workspace=packages/grpc-contracts \
  && npm run build --workspace=packages/compiler-core \
  && npm run build --workspace=services/compiler
 
@@ -24,6 +27,7 @@ FROM node:20-slim AS prod-deps
 WORKDIR /app
 COPY package.json package-lock.json ./
 COPY packages/shared/package.json packages/shared/package.json
+COPY packages/grpc-contracts/package.json packages/grpc-contracts/package.json
 COPY packages/compiler-core/package.json packages/compiler-core/package.json
 COPY services/compiler/package.json services/compiler/package.json
 COPY services/projects/package.json services/projects/package.json
@@ -39,10 +43,14 @@ COPY --from=prod-deps /app/node_modules ./node_modules
 COPY --from=build /app/package.json ./package.json
 COPY --from=build /app/packages/shared/package.json packages/shared/package.json
 COPY --from=build /app/packages/shared/dist packages/shared/dist
+COPY --from=build /app/packages/grpc-contracts/package.json packages/grpc-contracts/package.json
+COPY --from=build /app/packages/grpc-contracts/dist packages/grpc-contracts/dist
+COPY --from=build /app/packages/grpc-contracts/proto packages/grpc-contracts/proto
 COPY --from=build /app/packages/compiler-core/package.json packages/compiler-core/package.json
 COPY --from=build /app/packages/compiler-core/dist packages/compiler-core/dist
 COPY --from=build /app/services/compiler/package.json services/compiler/package.json
 COPY --from=build /app/services/compiler/dist services/compiler/dist
 USER appuser
-EXPOSE 4001
+# 4001 = HTTP, 50051 = gRPC (CompilerService/ExportService v1).
+EXPOSE 4001 50051
 CMD ["node", "services/compiler/dist/http/main.js"]

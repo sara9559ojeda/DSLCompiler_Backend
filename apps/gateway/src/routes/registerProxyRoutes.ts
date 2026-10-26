@@ -27,6 +27,7 @@ export function registerProxyRoutes(fastify: FastifyInstance, upstreamClient: IU
         }
 
         const upstreamResponse = await upstreamClient.forward({
+          target: route.target,
           baseUrl: UPSTREAM_TARGETS[route.target],
           path: resolveUpstreamPath(route.upstreamPath, request.params as Record<string, string>),
           method: route.method,

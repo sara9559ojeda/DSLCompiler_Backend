@@ -23,3 +23,5 @@ export {
 export { SvgExporter } from "./export/SvgExporter.js";
 export { PngExporter } from "./export/PngExporter.js";
 export type { IExporter, ExportFormat } from "./export/IExporter.js";
+export { CompilerApplication } from "./application/CompilerApplication.js";
+export { buildGrpcServer, startGrpcServer } from "./grpc/server.js";

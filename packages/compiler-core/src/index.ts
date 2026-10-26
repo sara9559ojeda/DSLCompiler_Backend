@@ -27,6 +27,9 @@ import { CompilerPipeline } from "./pipeline/CompilerPipeline.js";
 
 export { CompilerPipeline } from "./pipeline/CompilerPipeline.js";
 export type { CompileResult } from "./pipeline/CompileResult.js";
+export type { CompilationStages, StageName, StageTiming } from "./pipeline/CompilationStages.js";
+export type { Token } from "./lexer/Token.js";
+export type { ProgramNode } from "./ast/nodes/ProgramNode.js";
 export { DefaultShapeRegistry } from "./semantic/ShapeRegistry.js";
 export type { IShapeRegistry } from "./semantic/ShapeRegistry.js";
 export { ColorResolver } from "./semantic/ColorResolver.js";

@@ -39,6 +39,14 @@ export const ROUTES: readonly ProxyRouteConfig[] = [
   },
   {
     method: "POST",
+    path: "/api/compile/stages",
+    upstreamPath: "/stages",
+    target: "compiler",
+    requiresAuth: false,
+    bodySchema: CompileRequestSchema,
+  },
+  {
+    method: "POST",
     path: "/api/export",
     upstreamPath: "/export",
     target: "compiler",

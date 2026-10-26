@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, master]
   pull_request:
   workflow_dispatch:
 
@@ -30,6 +30,9 @@ jobs:
 
       - name: Lint
         run: npm run lint
+
+      - name: gRPC contracts — generated code matches the .proto files
+        run: npm run proto:check
 
       - name: Typecheck (builds packages/shared + services/compiler first)
         run: npm run typecheck
@@ -78,6 +81,13 @@ jobs:
       - name: Smoke test /api/compile through the gateway
         run: |
           curl -sf -X POST http://localhost:4000/api/compile             -H "content-type: application/json"             -d '{"source":"c1 = crear_circulo(radio=50, color=rojo, x=10, y=10);"}'             | grep -q '"success":true'
+
+      - name: Smoke test the gRPC hop (gateway → compiler over gRPC)
+        run: |
+          docker compose logs compiler | grep -q "gRPC listening"
+          curl -sf -X POST http://localhost:4000/api/compile/stages             -H "content-type: application/json"             -d '{"source":"c1 = crear_circulo(radio=50, x=10, y=10);"}'             | grep -q '"timings"'
+          curl -sf -X POST http://localhost:4000/api/export             -H "content-type: application/json"             -d '{"source":"c1 = crear_circulo(radio=50, x=10, y=10);","format":"png"}'             -o out.png
+          head -c 4 out.png | grep -q PNG
 
       - name: Dump service logs on failure
         if: failure()
