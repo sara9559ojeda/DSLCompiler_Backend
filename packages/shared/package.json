@@ -6,7 +6,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/sara9559ojeda/DSLCompiler.git",
+    "url": "git+https://github.com/sara9559ojeda/DSLCompiler_Backend.git",
     "directory": "packages/shared"
   },
   "type": "module",
