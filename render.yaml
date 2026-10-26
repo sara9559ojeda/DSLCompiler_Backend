@@ -91,6 +91,9 @@ services:
   - type: web
     name: compiler-img-gateway
     runtime: docker
+    # Builds the Dockerfile's last stage, `bundled`: gateway + compiler in
+    # one container, talking gRPC over 127.0.0.1 (Render's edge can't carry
+    # gRPC between services). See docs/adr/0013-bundled-gateway-compiler-grpc.md.
     dockerfilePath: ./apps/gateway/Dockerfile
     dockerContext: .
     plan: free

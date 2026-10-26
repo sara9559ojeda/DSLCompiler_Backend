@@ -78,6 +78,9 @@ services:
     build:
       context: .
       dockerfile: apps/gateway/Dockerfile
+      # Gateway alone; the compiler runs as its own container here. (The
+      # Dockerfile's default `bundled` stage is for Render — see ADR 0013.)
+      target: runtime
     environment:
       PORT: 4000
       HOST: 0.0.0.0

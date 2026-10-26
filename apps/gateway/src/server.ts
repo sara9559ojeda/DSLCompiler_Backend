@@ -23,7 +23,13 @@ export async function buildServer(options: BuildServerOptions = {}): Promise<Fas
   await fastify.register(rateLimitPlugin);
   await fastify.register(authPlugin);
 
-  fastify.get("/health", async () => ({ status: "ok" }));
+  // Lets anyone confirm from the outside which transport the gateway uses
+  // to reach the compiler (e.g. `curl -i .../health`).
+  fastify.addHook("onSend", async (_request, reply) => {
+    reply.header("x-compiler-transport", COMPILER_TRANSPORT);
+  });
+
+  fastify.get("/health", async () => ({ status: "ok", compilerTransport: COMPILER_TRANSPORT }));
 
   registerProxyRoutes(fastify, options.upstreamClient ?? createUpstreamClient(fastify));
 
