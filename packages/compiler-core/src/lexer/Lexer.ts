@@ -100,8 +100,10 @@ export class Lexer {
     if (lexeme.length === 1) {
       this.diagnostics.push({
         severity: "error",
+        code: "LEX-002",
         message: "Se esperaba al menos un dígito hexadecimal después de '#'.",
         position: startPos,
+        suggestion: "Escribe el color completo, por ejemplo #ff0000, o usa un nombre como rojo.",
       });
       return;
     }
@@ -116,8 +118,10 @@ export class Lexer {
     if (this.isAtEnd() || this.peek() === "\n") {
       this.diagnostics.push({
         severity: "error",
+        code: "LEX-003",
         message: "Cadena de texto sin cerrar (falta '\"').",
         position: startPos,
+        suggestion: "Cierra el texto con comillas dobles en la misma línea.",
       });
       return;
     }
@@ -156,8 +160,15 @@ export class Lexer {
   private reportUnexpectedChar(char: string, position: { line: number; column: number }): void {
     this.diagnostics.push({
       severity: "error",
+      code: "LEX-001",
       message: `Carácter inesperado: '${char}'.`,
       position,
+      suggestion:
+        char === "'"
+          ? 'Usa comillas dobles (") para el texto.'
+          : char === "/"
+            ? "Los comentarios empiezan con //."
+            : `Elimina el carácter '${char}'.`,
     });
   }
 

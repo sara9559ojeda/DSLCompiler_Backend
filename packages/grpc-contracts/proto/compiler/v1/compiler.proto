@@ -29,6 +29,11 @@ message Diagnostic {
   Severity severity = 1;
   string message = 2;
   SourcePosition position = 3;
+  // Stable catalog code, e.g. "SEM-009" (compiler-core DIAGNOSTIC_CODES).
+  string code = 4;
+  optional string suggestion = 5;
+  // The source line the diagnostic points at.
+  optional string snippet = 6;
 }
 
 message CompileRequest {
@@ -61,6 +66,12 @@ message Token {
   SourcePosition position = 3;
 }
 
+message PassReport {
+  string pass = 1;
+  uint32 removed_shapes = 2;
+  uint32 removed_connections = 3;
+}
+
 message StageTiming {
   string stage = 1;
   double duration_ms = 2;
@@ -76,4 +87,7 @@ message CompilationStagesResponse {
   optional string svg = 5;
   repeated Diagnostic diagnostics = 6;
   repeated StageTiming timings = 7;
+  // Empty when the program has errors (the optimizer only runs on valid input).
+  string optimized_scene_json = 8;
+  repeated PassReport optimization = 9;
 }

@@ -13,8 +13,8 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.125.0",
-    "@saramariaojeda9559/compiler-core": "0.1.0",
     "@compiler-img/shared": "0.1.0",
+    "@saramariaojeda9559/compiler-core": "0.2.0",
     "dotenv": "^16.4.5",
     "fastify": "^5.1.0"
   },

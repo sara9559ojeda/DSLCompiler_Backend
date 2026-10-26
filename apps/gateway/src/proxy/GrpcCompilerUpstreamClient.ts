@@ -76,6 +76,8 @@ export class GrpcCompilerUpstreamClient implements IUpstreamClient {
           svg: response.svg ?? null,
           diagnostics: response.diagnostics.map(fromGrpcDiagnostic),
           timings: response.timings,
+          optimizedSceneJson: response.optimizedSceneJson,
+          optimization: response.optimization,
         });
       }
       case "/export": {
@@ -105,8 +107,11 @@ export class GrpcCompilerUpstreamClient implements IUpstreamClient {
 function fromGrpcDiagnostic(diagnostic: GrpcDiagnosticOutput) {
   return {
     severity: diagnostic.severity === "SEVERITY_WARNING" ? "warning" : "error",
+    code: diagnostic.code,
     message: diagnostic.message,
     position: diagnostic.position ?? { line: 0, column: 0 },
+    ...(diagnostic.suggestion === undefined ? {} : { suggestion: diagnostic.suggestion }),
+    ...(diagnostic.snippet === undefined ? {} : { snippet: diagnostic.snippet }),
   };
 }
 

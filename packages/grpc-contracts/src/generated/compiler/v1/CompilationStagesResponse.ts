@@ -3,6 +3,7 @@
 import type { Token as _compiler_v1_Token, Token__Output as _compiler_v1_Token__Output } from '../../compiler/v1/Token.js';
 import type { Diagnostic as _compiler_v1_Diagnostic, Diagnostic__Output as _compiler_v1_Diagnostic__Output } from '../../compiler/v1/Diagnostic.js';
 import type { StageTiming as _compiler_v1_StageTiming, StageTiming__Output as _compiler_v1_StageTiming__Output } from '../../compiler/v1/StageTiming.js';
+import type { PassReport as _compiler_v1_PassReport, PassReport__Output as _compiler_v1_PassReport__Output } from '../../compiler/v1/PassReport.js';
 
 export interface CompilationStagesResponse {
   'success'?: (boolean);
@@ -12,6 +13,8 @@ export interface CompilationStagesResponse {
   'svg'?: (string);
   'diagnostics'?: (_compiler_v1_Diagnostic)[];
   'timings'?: (_compiler_v1_StageTiming)[];
+  'optimizedSceneJson'?: (string);
+  'optimization'?: (_compiler_v1_PassReport)[];
   '_svg'?: "svg";
 }
 
@@ -23,5 +26,7 @@ export interface CompilationStagesResponse__Output {
   'svg'?: (string);
   'diagnostics': (_compiler_v1_Diagnostic__Output)[];
   'timings': (_compiler_v1_StageTiming__Output)[];
+  'optimizedSceneJson': (string);
+  'optimization': (_compiler_v1_PassReport__Output)[];
   '_svg'?: "svg";
 }

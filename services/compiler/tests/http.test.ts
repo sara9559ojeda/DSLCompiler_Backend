@@ -102,7 +102,8 @@ describe("Compiler HTTP server", () => {
     expect(body.success).toBe(true);
     expect(body.tokens.length).toBeGreaterThan(0);
     expect(JSON.parse(body.astJson).node).toBe("ProgramNode");
-    expect(body.timings).toHaveLength(4);
+    expect(body.timings).toHaveLength(5);
+    expect(body.optimization).toHaveLength(3);
   });
 
   it("POST /compile rejects a source over the size limit with 400", async () => {

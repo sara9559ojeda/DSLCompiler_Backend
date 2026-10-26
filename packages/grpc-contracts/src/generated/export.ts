@@ -9,6 +9,7 @@ import type { CompileRequest as _compiler_v1_CompileRequest, CompileRequest__Out
 import type { CompileResponse as _compiler_v1_CompileResponse, CompileResponse__Output as _compiler_v1_CompileResponse__Output } from './compiler/v1/CompileResponse.js';
 import type { CompilerServiceClient as _compiler_v1_CompilerServiceClient, CompilerServiceDefinition as _compiler_v1_CompilerServiceDefinition } from './compiler/v1/CompilerService.js';
 import type { Diagnostic as _compiler_v1_Diagnostic, Diagnostic__Output as _compiler_v1_Diagnostic__Output } from './compiler/v1/Diagnostic.js';
+import type { PassReport as _compiler_v1_PassReport, PassReport__Output as _compiler_v1_PassReport__Output } from './compiler/v1/PassReport.js';
 import type { SourcePosition as _compiler_v1_SourcePosition, SourcePosition__Output as _compiler_v1_SourcePosition__Output } from './compiler/v1/SourcePosition.js';
 import type { StageTiming as _compiler_v1_StageTiming, StageTiming__Output as _compiler_v1_StageTiming__Output } from './compiler/v1/StageTiming.js';
 import type { Token as _compiler_v1_Token, Token__Output as _compiler_v1_Token__Output } from './compiler/v1/Token.js';
@@ -34,6 +35,7 @@ export interface ProtoGrpcType {
       CompileResponse: MessageTypeDefinition<_compiler_v1_CompileResponse, _compiler_v1_CompileResponse__Output>
       CompilerService: SubtypeConstructor<typeof grpc.Client, _compiler_v1_CompilerServiceClient> & { service: _compiler_v1_CompilerServiceDefinition }
       Diagnostic: MessageTypeDefinition<_compiler_v1_Diagnostic, _compiler_v1_Diagnostic__Output>
+      PassReport: MessageTypeDefinition<_compiler_v1_PassReport, _compiler_v1_PassReport__Output>
       Severity: EnumTypeDefinition
       SourcePosition: MessageTypeDefinition<_compiler_v1_SourcePosition, _compiler_v1_SourcePosition__Output>
       StageTiming: MessageTypeDefinition<_compiler_v1_StageTiming, _compiler_v1_StageTiming__Output>

@@ -1,5 +1,8 @@
 import type { Diagnostic, SourcePosition } from "../diagnostics/Diagnostic.js";
+import type { DiagnosticCode } from "../diagnostics/DiagnosticCodes.js";
+import { closestMatch, didYouMean } from "../diagnostics/suggest.js";
 import type { ShapeDefinition } from "../registry/ShapeDefinition.js";
+import type { ParamType } from "../registry/ParamDefinition.js";
 import { CANVAS_WIDTH, CANVAS_HEIGHT, MAX_STATEMENTS_PER_PROGRAM } from "../config/compiler.config.js";
 import type { ProgramNode } from "../ast/nodes/ProgramNode.js";
 import type { StatementNode } from "../ast/nodes/StatementNode.js";
@@ -29,6 +32,22 @@ interface ResolvedCommandCall {
 
 type ValueOutcome = { ok: true; value: number | string } | { ok: false };
 
+const DUPLICATE_HINT = "Deja un solo valor para este parámetro.";
+
+const EXAMPLE_VALUES: Readonly<Record<string, string>> = {
+  number: "50",
+  color: "rojo",
+  string: '"Hola"',
+  shapeRef: "c1",
+} satisfies Record<ParamType, string>;
+
+const TYPE_DESCRIPTIONS: Readonly<Record<string, string>> = {
+  number: "un número",
+  color: "un color",
+  string: "un texto entre comillas",
+  shapeRef: "el nombre de una figura declarada",
+} satisfies Record<ParamType, string>;
+
 /**
  * Validates the AST against the ShapeRegistry and lowers it into a Scene
  * (the IR the CodeGenerator draws from). Implements IValueVisitor because
@@ -52,8 +71,10 @@ export class SemanticAnalyzer implements IValueVisitor<ValueOutcome> {
   public analyze(program: ProgramNode): SemanticAnalysisResult {
     if (program.statements.length > MAX_STATEMENTS_PER_PROGRAM) {
       this.error(
+        "SEM-001",
         `El programa excede el máximo de ${MAX_STATEMENTS_PER_PROGRAM} instrucciones.`,
         { line: 1, column: 1 },
+        "Divide el diagrama en partes más pequeñas.",
       );
       return this.buildResult();
     }
@@ -81,7 +102,12 @@ export class SemanticAnalyzer implements IValueVisitor<ValueOutcome> {
 
   private analyzeAssignment(node: AssignmentNode): void {
     if (this.symbolTable.has(node.identifier)) {
-      this.error(`El identificador '${node.identifier}' ya fue declarado.`, node.position);
+      this.error(
+        "SEM-002",
+        `El identificador '${node.identifier}' ya fue declarado.`,
+        node.position,
+        `Usa otro nombre, por ejemplo '${this.freeIdentifier(node.identifier)}'.`,
+      );
       return;
     }
 
@@ -90,8 +116,10 @@ export class SemanticAnalyzer implements IValueVisitor<ValueOutcome> {
 
     if (resolved.definition.category !== "shape") {
       this.error(
+        "SEM-003",
         `El comando '${node.call.name}' no puede asignarse a un identificador.`,
         node.position,
+        `Quita '${node.identifier} =' y deja solo ${node.call.name}(...).`,
       );
       return;
     }
@@ -118,7 +146,13 @@ export class SemanticAnalyzer implements IValueVisitor<ValueOutcome> {
   private resolveCommandCall(call: CommandCallNode): ResolvedCommandCall | null {
     const definition = this.registry.get(call.name);
     if (!definition) {
-      this.error(`Comando desconocido: '${call.name}'.`, call.position);
+      const names = this.registry.all().map((candidate) => candidate.name);
+      this.error(
+        "SEM-004",
+        `Comando desconocido: '${call.name}'.`,
+        call.position,
+        didYouMean(closestMatch(call.name, names)) ?? `Comandos disponibles: ${names.join(", ")}.`,
+      );
       return null;
     }
 
@@ -131,8 +165,10 @@ export class SemanticAnalyzer implements IValueVisitor<ValueOutcome> {
       if (arg.name === null) {
         if (namedSeen) {
           this.error(
+            "SEM-005",
             "Los argumentos posicionales deben ir antes que los argumentos nombrados.",
             arg.position,
+            "Escribe este argumento con nombre (nombre=valor) o muévelo al principio.",
           );
           hasError = true;
           continue;
@@ -140,14 +176,16 @@ export class SemanticAnalyzer implements IValueVisitor<ValueOutcome> {
         const paramDef = definition.params[positionalIndex];
         if (!paramDef) {
           this.error(
+            "SEM-006",
             `El comando '${call.name}' no acepta más argumentos posicionales.`,
             arg.position,
+            `'${call.name}' recibe: ${definition.params.map((p) => p.name).join(", ")}.`,
           );
           hasError = true;
           continue;
         }
         if (rawArgs.has(paramDef.name)) {
-          this.error(`Argumento duplicado: '${paramDef.name}'.`, arg.position);
+          this.error("SEM-007", `Argumento duplicado: '${paramDef.name}'.`, arg.position, DUPLICATE_HINT);
           hasError = true;
           continue;
         }
@@ -157,12 +195,18 @@ export class SemanticAnalyzer implements IValueVisitor<ValueOutcome> {
         namedSeen = true;
         const paramDef = definition.params.find((p) => p.name === arg.name);
         if (!paramDef) {
-          this.error(`Parámetro desconocido '${arg.name}' para el comando '${call.name}'.`, arg.position);
+          const paramNames = definition.params.map((p) => p.name);
+          this.error(
+            "SEM-008",
+            `Parámetro desconocido '${arg.name}' para el comando '${call.name}'.`,
+            arg.position,
+            didYouMean(closestMatch(arg.name, paramNames)) ?? `'${call.name}' acepta: ${paramNames.join(", ")}.`,
+          );
           hasError = true;
           continue;
         }
         if (rawArgs.has(arg.name)) {
-          this.error(`Argumento duplicado: '${arg.name}'.`, arg.position);
+          this.error("SEM-007", `Argumento duplicado: '${arg.name}'.`, arg.position, DUPLICATE_HINT);
           hasError = true;
           continue;
         }
@@ -175,7 +219,12 @@ export class SemanticAnalyzer implements IValueVisitor<ValueOutcome> {
       const valueNode = rawArgs.get(paramDef.name);
       if (valueNode === undefined) {
         if (paramDef.required) {
-          this.error(`Falta el parámetro requerido '${paramDef.name}' en '${call.name}'.`, call.position);
+          this.error(
+            "SEM-009",
+            `Falta el parámetro requerido '${paramDef.name}' en '${call.name}'.`,
+            call.position,
+            `Agrega ${paramDef.name}=${EXAMPLE_VALUES[paramDef.type]} dentro de los paréntesis.`,
+          );
           hasError = true;
           continue;
         }
@@ -199,7 +248,7 @@ export class SemanticAnalyzer implements IValueVisitor<ValueOutcome> {
   visitNumberLiteral(node: NumberLiteralNode): ValueOutcome {
     const param = this.activeParam!;
     if (param.type !== "number") {
-      this.error(`El parámetro '${param.name}' no admite un número.`, node.position);
+      this.typeError(param, "un número", node.position);
       return { ok: false };
     }
     return { ok: true, value: node.value };
@@ -208,14 +257,11 @@ export class SemanticAnalyzer implements IValueVisitor<ValueOutcome> {
   visitStringLiteral(node: StringLiteralNode): ValueOutcome {
     const param = this.activeParam!;
     if (param.type !== "string") {
-      this.error(`El parámetro '${param.name}' no admite una cadena de texto.`, node.position);
+      this.typeError(param, "una cadena de texto", node.position);
       return { ok: false };
     }
     if (param.allowedValues && !param.allowedValues.includes(node.value)) {
-      this.error(
-        `Valor no permitido para '${param.name}': '${node.value}'. Valores válidos: ${param.allowedValues.join(", ")}.`,
-        node.position,
-      );
+      this.notAllowed(param.name, param.allowedValues, node.value, node.position);
       return { ok: false };
     }
     return { ok: true, value: node.value };
@@ -224,7 +270,7 @@ export class SemanticAnalyzer implements IValueVisitor<ValueOutcome> {
   visitHexColorLiteral(node: HexColorLiteralNode): ValueOutcome {
     const param = this.activeParam!;
     if (param.type !== "color") {
-      this.error(`El parámetro '${param.name}' no admite un color.`, node.position);
+      this.typeError(param, "un color", node.position);
       return { ok: false };
     }
     return { ok: true, value: node.value };
@@ -236,14 +282,27 @@ export class SemanticAnalyzer implements IValueVisitor<ValueOutcome> {
       case "color": {
         const hex = this.colorResolver.resolve(node.name);
         if (hex === undefined) {
-          this.error(`Color desconocido: '${node.name}'.`, node.position);
+          const colors = this.colorResolver.names();
+          this.error(
+            "SEM-012",
+            `Color desconocido: '${node.name}'.`,
+            node.position,
+            didYouMean(closestMatch(node.name, colors)) ??
+              `Usa un color con nombre (${colors.join(", ")}) o un hexadecimal como #ff8800.`,
+          );
           return { ok: false };
         }
         return { ok: true, value: hex };
       }
       case "shapeRef": {
         if (!this.symbolTable.has(node.name)) {
-          this.error(`Referencia a una figura no declarada: '${node.name}'.`, node.position);
+          this.error(
+            "SEM-013",
+            `Referencia a una figura no declarada: '${node.name}'.`,
+            node.position,
+            didYouMean(closestMatch(node.name, this.symbolTable.keys())) ??
+              `Declara la figura antes, por ejemplo: ${node.name} = crear_circulo(radio=20, x=100, y=100);`,
+          );
           return { ok: false };
         }
         return { ok: true, value: node.name };
@@ -253,22 +312,54 @@ export class SemanticAnalyzer implements IValueVisitor<ValueOutcome> {
           return { ok: true, value: node.name };
         }
         if (param.allowedValues) {
-          this.error(
-            `Valor no permitido para '${param.name}': '${node.name}'. Valores válidos: ${param.allowedValues.join(", ")}.`,
-            node.position,
-          );
+          this.notAllowed(param.name, param.allowedValues, node.name, node.position);
           return { ok: false };
         }
-        this.error(`El parámetro '${param.name}' espera una cadena de texto entre comillas.`, node.position);
+        this.error(
+          "SEM-014",
+          `El parámetro '${param.name}' espera una cadena de texto entre comillas.`,
+          node.position,
+          `Escríbelo entre comillas: ${param.name}="${node.name}".`,
+        );
         return { ok: false };
       }
       default:
-        this.error(`El parámetro '${param.name}' no admite un identificador.`, node.position);
+        this.typeError(param, "un identificador", node.position);
         return { ok: false };
     }
   }
 
-  private error(message: string, position: SourcePosition): void {
-    this.diagnostics.push({ severity: "error", message, position });
+  private typeError(param: { name: string; type: string }, given: string, position: SourcePosition): void {
+    this.error(
+      "SEM-010",
+      `El parámetro '${param.name}' no admite ${given}.`,
+      position,
+      `'${param.name}' espera ${TYPE_DESCRIPTIONS[param.type] ?? param.type}, por ejemplo ${param.name}=${EXAMPLE_VALUES[param.type] ?? "..."}.`,
+    );
+  }
+
+  private notAllowed(
+    paramName: string,
+    allowed: readonly (string | number)[],
+    value: string,
+    position: SourcePosition,
+  ): void {
+    this.error(
+      "SEM-011",
+      `Valor no permitido para '${paramName}': '${value}'. Valores válidos: ${allowed.join(", ")}.`,
+      position,
+      didYouMean(closestMatch(value, allowed.map(String))) ?? `Usa uno de: ${allowed.join(", ")}.`,
+    );
+  }
+
+  /** First `<base>2`, `<base>3`, … not yet taken — for the "use another name" suggestion. */
+  private freeIdentifier(base: string): string {
+    let suffix = 2;
+    while (this.symbolTable.has(`${base}${suffix}`)) suffix += 1;
+    return `${base}${suffix}`;
+  }
+
+  private error(code: DiagnosticCode, message: string, position: SourcePosition, suggestion?: string): void {
+    this.diagnostics.push({ severity: "error", code, message, position, ...(suggestion ? { suggestion } : {}) });
   }
 }

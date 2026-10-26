@@ -54,7 +54,13 @@ describe("Gateway → compiler over gRPC", () => {
     const body = response.json();
     expect(body.success).toBe(false);
     expect(body.svg).toBeNull();
-    expect(body.diagnostics[0]).toMatchObject({ severity: "error", position: { line: 1 } });
+    expect(body.diagnostics[0]).toMatchObject({
+      severity: "error",
+      code: "SEM-009",
+      suggestion: "Agrega radio=50 dentro de los paréntesis.",
+      snippet: "crear_circulo(x=0, y=0);",
+      position: { line: 1 },
+    });
   });
 
   it("POST /api/compile/stages returns tokens, AST, IR and timings", async () => {
@@ -64,7 +70,7 @@ describe("Gateway → compiler over gRPC", () => {
       payload: { source: "c1 = crear_circulo(radio=10, x=0, y=0);" },
     });
     expect(response.statusCode).toBe(200);
-    expect(response.json().timings).toHaveLength(4);
+    expect(response.json().timings).toHaveLength(5);
   });
 
   it("POST /api/export streams PNG bytes with the right content type", async () => {

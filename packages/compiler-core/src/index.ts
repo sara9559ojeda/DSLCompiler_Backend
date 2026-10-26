@@ -24,6 +24,8 @@ import { DefaultShapeRegistry } from "./semantic/ShapeRegistry.js";
 import { ColorResolver } from "./semantic/ColorResolver.js";
 import { SvgShapeRenderer } from "./codegen/SvgShapeRenderer.js";
 import { CompilerPipeline } from "./pipeline/CompilerPipeline.js";
+import { SceneOptimizer, type IScenePass } from "./optimizer/SceneOptimizer.js";
+import { DEFAULT_SCENE_PASSES } from "./optimizer/passes.js";
 
 export { CompilerPipeline } from "./pipeline/CompilerPipeline.js";
 export type { CompileResult } from "./pipeline/CompileResult.js";
@@ -40,6 +42,8 @@ export { Parser } from "./parser/Parser.js";
 export { SemanticAnalyzer } from "./semantic/SemanticAnalyzer.js";
 export type { Scene, ResolvedShape, ResolvedConnection } from "./semantic/Scene.js";
 export type { Diagnostic, DiagnosticSeverity, SourcePosition } from "./diagnostics/Diagnostic.js";
+export { DIAGNOSTIC_CODES, type DiagnosticCode } from "./diagnostics/DiagnosticCodes.js";
+export { closestMatch, editDistance } from "./diagnostics/suggest.js";
 export type { ParamDefinition, ParamType } from "./registry/ParamDefinition.js";
 export type { ShapeDefinition, ShapeCategory } from "./registry/ShapeDefinition.js";
 export { SHAPE_DEFINITIONS } from "./registry/shapes.config.js";
@@ -51,9 +55,25 @@ export {
   CONNECTION_TYPES,
 } from "./registry/dsl-defaults.config.js";
 
-export function createDefaultPipeline(): CompilerPipeline {
+export { SceneOptimizer } from "./optimizer/SceneOptimizer.js";
+export type { IScenePass, PassReport, OptimizationResult } from "./optimizer/SceneOptimizer.js";
+export {
+  DEFAULT_SCENE_PASSES,
+  removeOffCanvasShapes,
+  removeDegenerateShapes,
+  removeOccludedShapes,
+} from "./optimizer/passes.js";
+
+export interface PipelineOptions {
+  /** `true` = DEFAULT_SCENE_PASSES; or pass your own list. Off by default, so output is unchanged unless asked. */
+  readonly optimize?: boolean | readonly IScenePass[];
+}
+
+export function createDefaultPipeline(options: PipelineOptions = {}): CompilerPipeline {
   const registry = new DefaultShapeRegistry(SHAPE_DEFINITIONS);
   const colorResolver = new ColorResolver(NAMED_COLORS);
   const renderer = new SvgShapeRenderer();
-  return new CompilerPipeline(registry, colorResolver, renderer);
+  const passes = options.optimize === true ? DEFAULT_SCENE_PASSES : options.optimize || [];
+  const optimizer = passes.length > 0 ? new SceneOptimizer(passes) : undefined;
+  return new CompilerPipeline(registry, colorResolver, renderer, optimizer);
 }

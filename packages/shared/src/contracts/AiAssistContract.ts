@@ -9,6 +9,10 @@ const DiagnosticSchema = Type.Object({
   severity: Type.Union([Type.Literal("error"), Type.Literal("warning")]),
   message: Type.String(),
   position: Type.Object({ line: Type.Number(), column: Type.Number() }),
+  // Sent by newer clients (compiler-core >= 0.2.0); optional so older ones keep working.
+  code: Type.Optional(Type.String({ maxLength: 20 })),
+  suggestion: Type.Optional(Type.String({ maxLength: 500 })),
+  snippet: Type.Optional(Type.String({ maxLength: 1000 })),
 });
 
 export const ExplainErrorRequestSchema = Type.Object({

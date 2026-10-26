@@ -14,6 +14,7 @@ import {
   IdentifierValueNode,
 } from "../ast/nodes/ValueNode.js";
 import { ParseError } from "./ParseError.js";
+import type { DiagnosticCode } from "../diagnostics/DiagnosticCodes.js";
 
 export interface ParseResult {
   readonly program: ProgramNode;
@@ -40,7 +41,13 @@ export class Parser {
         statements.push(this.parseStatement());
       } catch (error) {
         if (error instanceof ParseError) {
-          this.diagnostics.push({ severity: "error", message: error.message, position: error.position });
+          this.diagnostics.push({
+            severity: "error",
+            code: error.code,
+            message: error.message,
+            position: error.position,
+            ...(error.suggestion ? { suggestion: error.suggestion } : {}),
+          });
           this.synchronize();
         } else {
           throw error;
@@ -53,20 +60,36 @@ export class Parser {
   private parseStatement(): StatementNode {
     const isAssignment = this.check(TokenType.Identifier) && this.checkNext(TokenType.Equals);
     const statement = isAssignment ? this.parseAssignment() : this.parseCommandCall();
-    this.expect(TokenType.Semicolon, "Se esperaba ';' al final de la instrucción.");
+    if (!this.check(TokenType.Semicolon)) {
+      // Point right after the statement, not at the next token — which is
+      // usually on the following line and would look unrelated.
+      const last = this.previous();
+      throw new ParseError(
+        "SYN-001",
+        "Se esperaba ';' al final de la instrucción.",
+        { line: last.position.line, column: last.position.column + Math.max(1, last.lexeme.length) },
+        "Agrega ';' al final de la línea.",
+      );
+    }
+    this.advance();
     return statement;
   }
 
   private parseAssignment(): AssignmentNode {
     const identifierToken = this.advance();
-    this.expect(TokenType.Equals, "Se esperaba '=' después del identificador.");
+    this.expect(TokenType.Equals, "SYN-002", "Se esperaba '=' después del identificador.");
     const call = this.parseCommandCall();
     return new AssignmentNode(identifierToken.lexeme, call, identifierToken.position);
   }
 
   private parseCommandCall(): CommandCallNode {
-    const nameToken = this.expect(TokenType.Identifier, "Se esperaba el nombre de un comando.");
-    this.expect(TokenType.LParen, "Se esperaba '(' después del nombre del comando.");
+    const nameToken = this.expect(
+      TokenType.Identifier,
+      "SYN-003",
+      "Se esperaba el nombre de un comando.",
+      "Empieza la instrucción con un comando, por ejemplo crear_circulo(...).",
+    );
+    this.expect(TokenType.LParen, "SYN-004", "Se esperaba '(' después del nombre del comando.");
 
     const args: ArgumentNode[] = [];
     if (!this.check(TokenType.RParen)) {
@@ -76,7 +99,12 @@ export class Parser {
       }
     }
 
-    this.expect(TokenType.RParen, "Se esperaba ')' para cerrar los argumentos.");
+    this.expect(
+      TokenType.RParen,
+      "SYN-005",
+      "Se esperaba ')' para cerrar los argumentos.",
+      "Separa los argumentos con ',' y cierra con ')'.",
+    );
     return new CommandCallNode(nameToken.lexeme, args, nameToken.position);
   }
 
@@ -112,8 +140,10 @@ export class Parser {
         return new IdentifierValueNode(token.lexeme, token.position);
       default:
         throw new ParseError(
+          "SYN-006",
           "Se esperaba un valor (número, color, texto o identificador).",
           token.position,
+          "Completa el argumento, por ejemplo radio=50.",
         );
     }
   }
@@ -127,11 +157,11 @@ export class Parser {
     }
   }
 
-  private expect(type: TokenType, message: string): Token {
+  private expect(type: TokenType, code: DiagnosticCode, message: string, suggestion?: string): Token {
     if (this.check(type)) {
       return this.advance();
     }
-    throw new ParseError(message, this.peek().position);
+    throw new ParseError(code, message, this.peek().position, suggestion);
   }
 
   private match(...types: TokenType[]): boolean {

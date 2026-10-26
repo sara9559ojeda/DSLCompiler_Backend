@@ -5,4 +5,8 @@ export class ColorResolver {
   resolve(name: string): string | undefined {
     return this.namedColors[name];
   }
+
+  names(): readonly string[] {
+    return Object.keys(this.namedColors);
+  }
 }

@@ -54,6 +54,9 @@ describe("Compiler gRPC server (v1 contract)", () => {
     expect(response.svg).toBeUndefined();
     expect(response.diagnostics[0]).toMatchObject({
       severity: "SEVERITY_ERROR",
+      code: "SEM-009",
+      suggestion: "Agrega radio=50 dentro de los paréntesis.",
+      snippet: "crear_circulo(x=0, y=0);",
       position: { line: expect.any(Number), column: expect.any(Number) },
     });
   });
@@ -78,7 +81,13 @@ describe("Compiler gRPC server (v1 contract)", () => {
     expect(JSON.parse(response.astJson).node).toBe("ProgramNode");
     expect(JSON.parse(response.sceneJson).shapes).toHaveLength(1);
     expect(response.svg).toContain("<svg");
-    expect(response.timings.map((timing) => timing.stage)).toEqual(["lexer", "parser", "semantic", "codegen"]);
+    expect(response.timings.map((timing) => timing.stage)).toEqual(["lexer", "parser", "semantic", "optimizer", "codegen"]);
+    expect(response.optimization.map((report) => report.pass)).toEqual([
+      "remove-degenerate",
+      "remove-off-canvas",
+      "remove-occluded",
+    ]);
+    expect(JSON.parse(response.optimizedSceneJson).shapes).toHaveLength(1);
   });
 
   it("Export returns PNG bytes", async () => {

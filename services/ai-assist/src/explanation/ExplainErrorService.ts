@@ -1,4 +1,4 @@
-import type { Diagnostic } from "@saramariaojeda9559/compiler-core";
+import type { ReportedDiagnostic } from "./ReportedDiagnostic.js";
 import type { IClaudeClient } from "../claude/IClaudeClient.js";
 import { buildExplainUserPrompt } from "../prompts/buildExplainUserPrompt.js";
 
@@ -8,7 +8,7 @@ export class ExplainErrorService {
     private readonly systemPrompt: string,
   ) {}
 
-  async explain(source: string, diagnostics: readonly Diagnostic[]): Promise<string> {
+  async explain(source: string, diagnostics: readonly ReportedDiagnostic[]): Promise<string> {
     const userPrompt = buildExplainUserPrompt(source, diagnostics);
     return this.claudeClient.complete(this.systemPrompt, userPrompt);
   }

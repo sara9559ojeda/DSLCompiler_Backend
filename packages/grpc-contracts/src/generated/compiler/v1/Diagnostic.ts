@@ -7,10 +7,20 @@ export interface Diagnostic {
   'severity'?: (_compiler_v1_Severity);
   'message'?: (string);
   'position'?: (_compiler_v1_SourcePosition | null);
+  'code'?: (string);
+  'suggestion'?: (string);
+  'snippet'?: (string);
+  '_suggestion'?: "suggestion";
+  '_snippet'?: "snippet";
 }
 
 export interface Diagnostic__Output {
   'severity': (_compiler_v1_Severity__Output);
   'message': (string);
   'position': (_compiler_v1_SourcePosition__Output | null);
+  'code': (string);
+  'suggestion'?: (string);
+  'snippet'?: (string);
+  '_suggestion'?: "suggestion";
+  '_snippet'?: "snippet";
 }

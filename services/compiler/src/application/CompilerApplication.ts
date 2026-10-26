@@ -1,8 +1,14 @@
-import { createDefaultPipeline, type CompileResult, type Diagnostic } from "@saramariaojeda9559/compiler-core";
+import {
+  createDefaultPipeline,
+  type CompileResult,
+  type Diagnostic,
+  type PassReport,
+} from "@saramariaojeda9559/compiler-core";
 import { EXPORT_CONTENT_TYPES } from "../config/export.config.js";
 import type { ExportFormat, IExporter } from "../export/IExporter.js";
 import { SvgExporter } from "../export/SvgExporter.js";
 import { PngExporter } from "../export/PngExporter.js";
+import { SvgSanitizer } from "../export/SvgSanitizer.js";
 import { toAstJson } from "./toAstJson.js";
 
 export interface AnalyzeOutcome {
@@ -15,6 +21,9 @@ export interface StagesOutcome {
   readonly tokens: readonly { type: string; lexeme: string; position: { line: number; column: number } }[];
   readonly astJson: string;
   readonly sceneJson: string;
+  /** Empty when there were errors (the optimizer only runs on valid programs). */
+  readonly optimizedSceneJson: string;
+  readonly optimization: readonly PassReport[];
   readonly svg: string | null;
   readonly diagnostics: readonly Diagnostic[];
   readonly timings: readonly { stage: string; durationMs: number }[];
@@ -41,6 +50,8 @@ export interface SupportedFormat {
 export class CompilerApplication {
   private readonly exporters: ReadonlyMap<ExportFormat, IExporter>;
 
+  private readonly sanitizer = new SvgSanitizer();
+
   constructor(exporters: readonly IExporter[] = [new SvgExporter(), new PngExporter()]) {
     this.exporters = new Map(exporters.map((exporter) => [exporter.format, exporter]));
   }
@@ -55,12 +66,14 @@ export class CompilerApplication {
   }
 
   stages(source: string): StagesOutcome {
-    const stages = createDefaultPipeline().compileWithStages(source);
+    const stages = createDefaultPipeline({ optimize: true }).compileWithStages(source);
     return {
       success: stages.result.success,
       tokens: stages.tokens.map(({ type, lexeme, position }) => ({ type, lexeme, position })),
       astJson: toAstJson(stages.program),
       sceneJson: JSON.stringify(stages.scene),
+      optimizedSceneJson: stages.optimizedScene ? JSON.stringify(stages.optimizedScene) : "",
+      optimization: stages.optimization ?? [],
       svg: stages.result.svg,
       diagnostics: stages.result.diagnostics,
       timings: stages.timings,
@@ -73,12 +86,15 @@ export class CompilerApplication {
       throw new UnsupportedFormatError(format);
     }
 
-    const result = this.compile(source);
+    // Exported files are optimized (smaller, visually identical) and
+    // sanitized (allowlisted elements/attributes only) — see SvgSanitizer.
+    const result = createDefaultPipeline({ optimize: true }).compile(source);
     if (!result.success || result.svg === null) {
       return { success: false, diagnostics: result.diagnostics };
     }
 
-    return { success: true, content: await exporter.export(result.svg), contentType: EXPORT_CONTENT_TYPES[format] };
+    const svg = this.sanitizer.sanitize(result.svg);
+    return { success: true, content: await exporter.export(svg), contentType: EXPORT_CONTENT_TYPES[format] };
   }
 
   supportedFormats(): readonly SupportedFormat[] {

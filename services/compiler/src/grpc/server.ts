@@ -46,6 +46,8 @@ export function buildGrpcServer(app: CompilerApplication = new CompilerApplicati
         ...(outcome.svg === null ? {} : { svg: outcome.svg }),
         diagnostics: outcome.diagnostics.map(toGrpcDiagnostic),
         timings: [...outcome.timings],
+        optimizedSceneJson: outcome.optimizedSceneJson,
+        optimization: [...outcome.optimization],
       };
     }),
   };
@@ -123,6 +125,9 @@ function toGrpcDiagnostic(diagnostic: Diagnostic): GrpcDiagnostic {
     severity: diagnostic.severity === "error" ? "SEVERITY_ERROR" : "SEVERITY_WARNING",
     message: diagnostic.message,
     position: diagnostic.position,
+    code: diagnostic.code,
+    ...(diagnostic.suggestion === undefined ? {} : { suggestion: diagnostic.suggestion }),
+    ...(diagnostic.snippet === undefined ? {} : { snippet: diagnostic.snippet }),
   };
 }
 

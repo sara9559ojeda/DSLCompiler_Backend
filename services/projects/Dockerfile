@@ -13,6 +13,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends openssl \
 COPY package.json package-lock.json tsconfig.base.json ./
 COPY packages/shared/package.json packages/shared/package.json
 COPY packages/grpc-contracts/package.json packages/grpc-contracts/package.json
+COPY packages/compiler-core/package.json packages/compiler-core/package.json
 COPY services/compiler/package.json services/compiler/package.json
 COPY services/projects/package.json services/projects/package.json
 COPY services/ai-assist/package.json services/ai-assist/package.json
@@ -32,6 +33,7 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 COPY packages/shared/package.json packages/shared/package.json
 COPY packages/grpc-contracts/package.json packages/grpc-contracts/package.json
+COPY packages/compiler-core/package.json packages/compiler-core/package.json
 COPY services/compiler/package.json services/compiler/package.json
 COPY services/projects/package.json services/projects/package.json
 COPY services/ai-assist/package.json services/ai-assist/package.json

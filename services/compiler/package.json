@@ -25,7 +25,7 @@
   "dependencies": {
     "@compiler-img/grpc-contracts": "0.1.0",
     "@compiler-img/shared": "0.1.0",
-    "@saramariaojeda9559/compiler-core": "0.1.0",
+    "@saramariaojeda9559/compiler-core": "0.2.0",
     "fastify": "^5.1.0",
     "sharp": "^0.33.5"
   },
