@@ -78,7 +78,7 @@ describe("Compiler gRPC server (v1 contract)", () => {
     });
     expect(response.success).toBe(true);
     expect(response.tokens.at(-1)?.type).toBe("EOF");
-    expect(JSON.parse(response.astJson).node).toBe("ProgramNode");
+    expect(JSON.parse(response.astJson).kind).toBe("program");
     expect(JSON.parse(response.sceneJson).shapes).toHaveLength(1);
     expect(response.svg).toContain("<svg");
     expect(response.timings.map((timing) => timing.stage)).toEqual(["lexer", "parser", "semantic", "optimizer", "codegen"]);

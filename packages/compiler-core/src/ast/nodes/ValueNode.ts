@@ -19,6 +19,8 @@ export abstract class ValueNode {
 }
 
 export class NumberLiteralNode extends ValueNode {
+  public readonly kind = "number" as const;
+
   constructor(
     public readonly value: number,
     position: SourcePosition,
@@ -32,6 +34,8 @@ export class NumberLiteralNode extends ValueNode {
 }
 
 export class StringLiteralNode extends ValueNode {
+  public readonly kind = "string" as const;
+
   constructor(
     public readonly value: string,
     position: SourcePosition,
@@ -45,6 +49,8 @@ export class StringLiteralNode extends ValueNode {
 }
 
 export class HexColorLiteralNode extends ValueNode {
+  public readonly kind = "hexColor" as const;
+
   constructor(
     public readonly value: string,
     position: SourcePosition,
@@ -58,6 +64,8 @@ export class HexColorLiteralNode extends ValueNode {
 }
 
 export class IdentifierValueNode extends ValueNode {
+  public readonly kind = "identifier" as const;
+
   constructor(
     public readonly name: string,
     position: SourcePosition,

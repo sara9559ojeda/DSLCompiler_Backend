@@ -101,7 +101,7 @@ describe("Compiler HTTP server", () => {
     const body = response.json();
     expect(body.success).toBe(true);
     expect(body.tokens.length).toBeGreaterThan(0);
-    expect(JSON.parse(body.astJson).node).toBe("ProgramNode");
+    expect(JSON.parse(body.astJson).kind).toBe("program");
     expect(body.timings).toHaveLength(5);
     expect(body.optimization).toHaveLength(3);
   });
