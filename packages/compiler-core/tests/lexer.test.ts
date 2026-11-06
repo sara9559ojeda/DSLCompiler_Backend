@@ -28,17 +28,18 @@ describe("Lexer", () => {
       TokenType.Comma,
       TokenType.Identifier, // y
       TokenType.Equals,
-      TokenType.Number, // -20.5
+      TokenType.Minus, // -
+      TokenType.Number, // 20.5
       TokenType.RParen,
       TokenType.Semicolon,
       TokenType.Eof,
     ]);
   });
 
-  it("parses negative and decimal numbers into a single token", () => {
+  it("lexes '-' as its own token (the parser folds '-5' into a literal) and keeps decimals whole", () => {
     const { tokens } = new Lexer("-20.5").tokenize();
-    expect(tokens[0]?.type).toBe(TokenType.Number);
-    expect(tokens[0]?.lexeme).toBe("-20.5");
+    expect(tokens.map((t) => t.type)).toEqual([TokenType.Minus, TokenType.Number, TokenType.Eof]);
+    expect(tokens[1]?.lexeme).toBe("20.5");
   });
 
   it("recognizes hex colors", () => {

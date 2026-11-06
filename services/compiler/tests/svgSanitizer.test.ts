@@ -48,3 +48,34 @@ describe("SvgSanitizer", () => {
     expect(sanitize('<svg><text x="1" y="1">hola')).toBe('<svg><text x="1" y="1">hola</text></svg>');
   });
 });
+
+describe("SvgSanitizer: groups, opacity and transforms (language 2.0)", () => {
+  const sanitizer = new SvgSanitizer();
+  const wrap = (body: string) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" width="800" height="600">${body}</svg>`;
+
+  it("keeps the compiler's own <g> with translate/rotate/scale and opacity", () => {
+    const svg = wrap('<g transform="translate(100 50) rotate(90) scale(2)" opacity="0.5"><circle cx="0" cy="0" r="5" fill="#e53935" opacity="0.4" /></g>');
+    expect(sanitizer.sanitize(svg)).toBe(svg);
+  });
+
+  it("keeps a rotated rect", () => {
+    const svg = wrap('<rect x="0" y="0" width="20" height="10" fill="#000000" transform="rotate(45 10 5)" />');
+    expect(sanitizer.sanitize(svg)).toBe(svg);
+  });
+
+  it("drops transforms that are not plain translate/rotate/scale", () => {
+    for (const transform of ["matrix(1 0 0 1 0 0)", "translate(1 2) url(#x)", "rotate(javascript:alert(1))", "translate(1 2", "scale()"]) {
+      expect(sanitizer.sanitize(wrap(`<g transform="${transform}"></g>`))).toBe(wrap("<g></g>"));
+    }
+  });
+
+  it("drops out-of-range or non-numeric opacity", () => {
+    expect(sanitizer.sanitize(wrap('<g opacity="2"></g>'))).toBe(wrap("<g></g>"));
+    expect(sanitizer.sanitize(wrap('<g opacity="url(#x)"></g>'))).toBe(wrap("<g></g>"));
+  });
+
+  it("does not let editor metadata or event handlers through", () => {
+    const dirty = wrap('<g onload="x()" data-group-id="g1"><circle cx="1" cy="1" r="1" fill="red" data-shape-id="c" onclick="x()" /></g>');
+    expect(sanitizer.sanitize(dirty)).toBe(wrap('<g><circle cx="1" cy="1" r="1" fill="red" /></g>'));
+  });
+});

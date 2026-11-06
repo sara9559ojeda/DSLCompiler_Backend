@@ -13,6 +13,11 @@ export const NAMED_COLORS: Readonly<Record<string, string>> = Object.freeze({
   negro: "#000000",
   blanco: "#ffffff",
   gris: "#757575",
+  rosa: "#ec407a",
+  celeste: "#4fc3f7",
+  marron: "#6d4c41",
+  turquesa: "#26a69a",
+  dorado: "#f9a825",
 });
 
 export const DEFAULT_SHAPE_COLOR = NAMED_COLORS["negro"];

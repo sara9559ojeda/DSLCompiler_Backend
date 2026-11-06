@@ -1,6 +1,15 @@
 import type { ShapeDefinition } from "./ShapeDefinition.js";
 import { DEFAULT_SHAPE_COLOR } from "./colors.config.js";
-import { DEFAULT_FONT_SIZE, DEFAULT_CONNECTION_TYPE, CONNECTION_TYPES } from "./dsl-defaults.config.js";
+import {
+  DEFAULT_FONT_SIZE,
+  DEFAULT_CONNECTION_TYPE,
+  CONNECTION_TYPES,
+  DEFAULT_OPACITY,
+  DEFAULT_ROTATION,
+} from "./dsl-defaults.config.js";
+
+const OPACITY_PARAM = { name: "opacidad", type: "number", required: false, defaultValue: DEFAULT_OPACITY } as const;
+const ROTATION_PARAM = { name: "rotacion", type: "number", required: false, defaultValue: DEFAULT_ROTATION } as const;
 
 /**
  * The full catalog of DSL commands. This is the single source of truth for
@@ -18,6 +27,7 @@ export const SHAPE_DEFINITIONS: readonly ShapeDefinition[] = [
       { name: "x", type: "number", required: true },
       { name: "y", type: "number", required: true },
       { name: "color", type: "color", required: false, defaultValue: DEFAULT_SHAPE_COLOR },
+      OPACITY_PARAM,
     ],
   },
   {
@@ -29,6 +39,8 @@ export const SHAPE_DEFINITIONS: readonly ShapeDefinition[] = [
       { name: "x", type: "number", required: true },
       { name: "y", type: "number", required: true },
       { name: "color", type: "color", required: false, defaultValue: DEFAULT_SHAPE_COLOR },
+      OPACITY_PARAM,
+      ROTATION_PARAM,
     ],
   },
   {
@@ -40,6 +52,7 @@ export const SHAPE_DEFINITIONS: readonly ShapeDefinition[] = [
       { name: "x2", type: "number", required: true },
       { name: "y2", type: "number", required: true },
       { name: "color", type: "color", required: false, defaultValue: DEFAULT_SHAPE_COLOR },
+      OPACITY_PARAM,
     ],
   },
   {
@@ -51,6 +64,8 @@ export const SHAPE_DEFINITIONS: readonly ShapeDefinition[] = [
       { name: "y", type: "number", required: true },
       { name: "color", type: "color", required: false, defaultValue: DEFAULT_SHAPE_COLOR },
       { name: "tamano", type: "number", required: false, defaultValue: DEFAULT_FONT_SIZE },
+      OPACITY_PARAM,
+      ROTATION_PARAM,
     ],
   },
   {
@@ -70,3 +85,20 @@ export const SHAPE_DEFINITIONS: readonly ShapeDefinition[] = [
     ],
   },
 ];
+
+/**
+ * `grupo(...) { ... }` is syntax (a block), not a registry command, but its
+ * arguments are validated like any other command's: same table, same errors.
+ * Transform order: translate(x, y) · rotate(rotacion) · scale(escala).
+ */
+export const GROUP_DEFINITION: ShapeDefinition = {
+  name: "grupo",
+  category: "group",
+  params: [
+    { name: "x", type: "number", required: false, defaultValue: 0 },
+    { name: "y", type: "number", required: false, defaultValue: 0 },
+    { name: "escala", type: "number", required: false, defaultValue: 1 },
+    { name: "rotacion", type: "number", required: false, defaultValue: DEFAULT_ROTATION },
+    OPACITY_PARAM,
+  ],
+};

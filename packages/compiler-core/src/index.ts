@@ -35,18 +35,38 @@ export type { ProgramNode } from "./ast/nodes/ProgramNode.js";
 export { DefaultShapeRegistry } from "./semantic/ShapeRegistry.js";
 export type { IShapeRegistry } from "./semantic/ShapeRegistry.js";
 export { ColorResolver } from "./semantic/ColorResolver.js";
-export { SvgShapeRenderer } from "./codegen/SvgShapeRenderer.js";
+export { SvgShapeRenderer, type SvgRenderOptions } from "./codegen/SvgShapeRenderer.js";
 export type { IShapeRenderer } from "./codegen/IShapeRenderer.js";
 export { Lexer } from "./lexer/Lexer.js";
 export { Parser } from "./parser/Parser.js";
 export { SemanticAnalyzer } from "./semantic/SemanticAnalyzer.js";
-export type { Scene, ResolvedShape, ResolvedConnection } from "./semantic/Scene.js";
+export type {
+  Scene,
+  ResolvedShape,
+  ResolvedConnection,
+  ResolvedGroup,
+  SourceOrigin,
+  ParamOrigin,
+  ParamEditability,
+  ParamValue,
+} from "./semantic/Scene.js";
+export type { Span } from "./ast/Span.js";
+export { walkExpression, walkStatements } from "./ast/walk.js";
+export { TokenType, KEYWORDS } from "./lexer/TokenType.js";
+export { BUILTIN_FUNCTIONS, type BuiltinFunction } from "./semantic/builtins.js";
+export type { AnalysisOptions } from "./semantic/SemanticAnalyzer.js";
+export {
+  DEFAULT_EXECUTION_LIMITS,
+  LANGUAGE_VERSION,
+  ANGLE_UNIT,
+  type ExecutionLimits,
+} from "./config/compiler.config.js";
 export type { Diagnostic, DiagnosticSeverity, SourcePosition } from "./diagnostics/Diagnostic.js";
 export { DIAGNOSTIC_CODES, type DiagnosticCode } from "./diagnostics/DiagnosticCodes.js";
 export { closestMatch, editDistance } from "./diagnostics/suggest.js";
 export type { ParamDefinition, ParamType } from "./registry/ParamDefinition.js";
 export type { ShapeDefinition, ShapeCategory } from "./registry/ShapeDefinition.js";
-export { SHAPE_DEFINITIONS } from "./registry/shapes.config.js";
+export { SHAPE_DEFINITIONS, GROUP_DEFINITION } from "./registry/shapes.config.js";
 export { NAMED_COLORS, DEFAULT_SHAPE_COLOR } from "./registry/colors.config.js";
 export {
   DEFAULT_FONT_SIZE,
@@ -67,12 +87,14 @@ export {
 export interface PipelineOptions {
   /** `true` = DEFAULT_SCENE_PASSES; or pass your own list. Off by default, so output is unchanged unless asked. */
   readonly optimize?: boolean | readonly IScenePass[];
+  /** Tag SVG elements with `data-shape-id` / `data-group-id` (for the visual editor's preview; keep off for exports). */
+  readonly embedIds?: boolean;
 }
 
 export function createDefaultPipeline(options: PipelineOptions = {}): CompilerPipeline {
   const registry = new DefaultShapeRegistry(SHAPE_DEFINITIONS);
   const colorResolver = new ColorResolver(NAMED_COLORS);
-  const renderer = new SvgShapeRenderer();
+  const renderer = new SvgShapeRenderer({ embedIds: options.embedIds ?? false });
   const passes = options.optimize === true ? DEFAULT_SCENE_PASSES : options.optimize || [];
   const optimizer = passes.length > 0 ? new SceneOptimizer(passes) : undefined;
   return new CompilerPipeline(registry, colorResolver, renderer, optimizer);

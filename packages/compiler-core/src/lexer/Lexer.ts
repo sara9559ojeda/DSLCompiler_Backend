@@ -1,6 +1,6 @@
 import type { Diagnostic } from "../diagnostics/Diagnostic.js";
 import { Token } from "./Token.js";
-import { TokenType } from "./TokenType.js";
+import { KEYWORDS, TokenType } from "./TokenType.js";
 
 export interface LexResult {
   readonly tokens: readonly Token[];
@@ -30,13 +30,17 @@ export class Lexer {
     while (!this.isAtEnd()) {
       this.scanToken();
     }
-    this.tokens.push(new Token(TokenType.Eof, "", this.currentPosition()));
+    this.tokens.push(new Token(TokenType.Eof, "", this.currentPosition(), this.position, 0));
     return { tokens: this.tokens, diagnostics: this.diagnostics };
   }
 
   private scanToken(): void {
     const startPos = this.currentPosition();
+    const startOffset = this.position;
     const char = this.advance();
+    const simple = (type: TokenType, lexeme = char): void => {
+      this.tokens.push(new Token(type, lexeme, startPos, startOffset, lexeme.length));
+    };
 
     switch (char) {
       case " ":
@@ -48,51 +52,98 @@ export class Lexer {
         this.column = 1;
         return;
       case "=":
-        this.tokens.push(new Token(TokenType.Equals, char, startPos));
+        if (this.peek() === "=") {
+          this.advance();
+          simple(TokenType.EqualEqual, "==");
+        } else simple(TokenType.Equals);
+        return;
+      case "!":
+        if (this.peek() === "=") {
+          this.advance();
+          simple(TokenType.BangEqual, "!=");
+        } else simple(TokenType.Bang);
+        return;
+      case "<":
+        if (this.peek() === "=") {
+          this.advance();
+          simple(TokenType.LessEqual, "<=");
+        } else simple(TokenType.Less);
+        return;
+      case ">":
+        if (this.peek() === "=") {
+          this.advance();
+          simple(TokenType.GreaterEqual, ">=");
+        } else simple(TokenType.Greater);
+        return;
+      case "&":
+        if (this.peek() === "&") {
+          this.advance();
+          simple(TokenType.AndAnd, "&&");
+        } else this.reportUnexpectedChar(char, startPos);
+        return;
+      case "|":
+        if (this.peek() === "|") {
+          this.advance();
+          simple(TokenType.OrOr, "||");
+        } else this.reportUnexpectedChar(char, startPos);
         return;
       case "(":
-        this.tokens.push(new Token(TokenType.LParen, char, startPos));
+        simple(TokenType.LParen);
         return;
       case ")":
-        this.tokens.push(new Token(TokenType.RParen, char, startPos));
+        simple(TokenType.RParen);
+        return;
+      case "{":
+        simple(TokenType.LBrace);
+        return;
+      case "}":
+        simple(TokenType.RBrace);
         return;
       case ",":
-        this.tokens.push(new Token(TokenType.Comma, char, startPos));
+        simple(TokenType.Comma);
         return;
       case ";":
-        this.tokens.push(new Token(TokenType.Semicolon, char, startPos));
+        simple(TokenType.Semicolon);
+        return;
+      case "+":
+        simple(TokenType.Plus);
+        return;
+      case "-":
+        simple(TokenType.Minus);
+        return;
+      case "*":
+        simple(TokenType.Star);
+        return;
+      case "%":
+        simple(TokenType.Percent);
         return;
       case "#":
-        this.scanHexColor(startPos);
+        this.scanHexColor(startPos, startOffset);
         return;
       case '"':
-        this.scanString(startPos);
+        this.scanString(startPos, startOffset);
         return;
       case "/":
         if (this.peek() === "/") {
           this.scanLineComment();
           return;
         }
-        this.reportUnexpectedChar(char, startPos);
+        simple(TokenType.Slash);
         return;
       default:
-        if (char === "-" && isDigit(this.peek())) {
-          this.scanNumber(startPos, char);
-          return;
-        }
         if (isDigit(char)) {
-          this.scanNumber(startPos, char);
+          this.scanNumber(startPos, startOffset, char);
           return;
         }
         if (isAlpha(char)) {
-          this.scanIdentifier(startPos, char);
+          this.scanIdentifier(startPos, startOffset, char);
           return;
         }
         this.reportUnexpectedChar(char, startPos);
     }
   }
 
-  private scanHexColor(startPos: { line: number; column: number }): void {
+  private scanHexColor(startPos: { line: number; column: number }, startOffset: number): void {
     let lexeme = "#";
     while (isHexDigit(this.peek())) {
       lexeme += this.advance();
@@ -107,10 +158,10 @@ export class Lexer {
       });
       return;
     }
-    this.tokens.push(new Token(TokenType.HexColor, lexeme, startPos));
+    this.tokens.push(new Token(TokenType.HexColor, lexeme, startPos, startOffset, lexeme.length));
   }
 
-  private scanString(startPos: { line: number; column: number }): void {
+  private scanString(startPos: { line: number; column: number }, startOffset: number): void {
     let lexeme = "";
     while (!this.isAtEnd() && this.peek() !== '"' && this.peek() !== "\n") {
       lexeme += this.advance();
@@ -126,10 +177,10 @@ export class Lexer {
       return;
     }
     this.advance(); // closing quote
-    this.tokens.push(new Token(TokenType.String, lexeme, startPos));
+    this.tokens.push(new Token(TokenType.String, lexeme, startPos, startOffset, lexeme.length + 2));
   }
 
-  private scanNumber(startPos: { line: number; column: number }, first: string): void {
+  private scanNumber(startPos: { line: number; column: number }, startOffset: number, first: string): void {
     let lexeme = first;
     while (isDigit(this.peek())) {
       lexeme += this.advance();
@@ -140,15 +191,15 @@ export class Lexer {
         lexeme += this.advance();
       }
     }
-    this.tokens.push(new Token(TokenType.Number, lexeme, startPos));
+    this.tokens.push(new Token(TokenType.Number, lexeme, startPos, startOffset, lexeme.length));
   }
 
-  private scanIdentifier(startPos: { line: number; column: number }, first: string): void {
+  private scanIdentifier(startPos: { line: number; column: number }, startOffset: number, first: string): void {
     let lexeme = first;
     while (isAlphaNumeric(this.peek())) {
       lexeme += this.advance();
     }
-    this.tokens.push(new Token(TokenType.Identifier, lexeme, startPos));
+    this.tokens.push(new Token(KEYWORDS[lexeme] ?? TokenType.Identifier, lexeme, startPos, startOffset, lexeme.length));
   }
 
   private scanLineComment(): void {

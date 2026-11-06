@@ -43,8 +43,8 @@ describe("SemanticAnalyzer", () => {
   });
 
   it("reports an unknown color", () => {
-    const { diagnostics } = analyze("c1 = crear_circulo(radio=1, x=0, y=0, color=turquesa);");
-    expect(diagnostics.some((d) => d.message.includes("turquesa"))).toBe(true);
+    const { diagnostics } = analyze("c1 = crear_circulo(radio=1, x=0, y=0, color=fucsia);");
+    expect(diagnostics.some((d) => d.message.includes("fucsia"))).toBe(true);
   });
 
   it("reports an unknown command", () => {

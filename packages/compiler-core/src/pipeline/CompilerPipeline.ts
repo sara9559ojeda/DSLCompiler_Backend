@@ -9,6 +9,7 @@ import type { CompileResult } from "./CompileResult.js";
 import type { CompilationStages, StageName, StageTiming } from "./CompilationStages.js";
 import type { Diagnostic } from "../diagnostics/Diagnostic.js";
 import type { SceneOptimizer } from "../optimizer/SceneOptimizer.js";
+import type { AnalysisOptions } from "../semantic/SemanticAnalyzer.js";
 
 /**
  * `performance.now()` exists in browsers and Node alike, but this package
@@ -32,12 +33,12 @@ export class CompilerPipeline {
     private readonly optimizer?: SceneOptimizer,
   ) {}
 
-  compile(source: string): CompileResult {
-    return this.compileWithStages(source).result;
+  compile(source: string, options?: AnalysisOptions): CompileResult {
+    return this.compileWithStages(source, options).result;
   }
 
   /** Same compile, but keeps every intermediate artifact and how long each phase took (for inspectors/tooling). */
-  compileWithStages(source: string): CompilationStages {
+  compileWithStages(source: string, options?: AnalysisOptions): CompilationStages {
     const timings: StageTiming[] = [];
     const timed = <T>(stage: StageName, run: () => T): T => {
       const start = clock.now();
@@ -49,7 +50,7 @@ export class CompilerPipeline {
     const lexResult = timed("lexer", () => new Lexer(source).tokenize());
     const parseResult = timed("parser", () => new Parser(lexResult.tokens).parse());
     const semanticResult = timed("semantic", () =>
-      new SemanticAnalyzer(this.registry, this.colorResolver).analyze(parseResult.program),
+      new SemanticAnalyzer(this.registry, this.colorResolver, options).analyze(parseResult.program),
     );
 
     const diagnostics = withSnippets(source, [

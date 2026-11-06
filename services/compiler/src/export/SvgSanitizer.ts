@@ -12,11 +12,12 @@
  */
 const ALLOWED_ELEMENTS: Readonly<Record<string, ReadonlySet<string>>> = {
   svg: new Set(["xmlns", "viewBox", "width", "height"]),
-  circle: new Set(["cx", "cy", "r", "fill"]),
-  rect: new Set(["x", "y", "width", "height", "fill"]),
-  line: new Set(["x1", "y1", "x2", "y2", "stroke", "stroke-width"]),
+  g: new Set(["transform", "opacity"]),
+  circle: new Set(["cx", "cy", "r", "fill", "opacity"]),
+  rect: new Set(["x", "y", "width", "height", "fill", "opacity", "transform"]),
+  line: new Set(["x1", "y1", "x2", "y2", "stroke", "stroke-width", "opacity"]),
   polygon: new Set(["points", "fill"]),
-  text: new Set(["x", "y", "fill", "font-size", "font-family"]),
+  text: new Set(["x", "y", "fill", "font-size", "font-family", "opacity", "transform"]),
 };
 
 const SVG_NAMESPACE = "http://www.w3.org/2000/svg";
@@ -25,8 +26,24 @@ const COLOR = /^(#[0-9a-f]{3,8}|[a-z]+)$/i;
 const NUMBER_LIST = /^[-\d.,\se]+$/i;
 const FONT_FAMILY = /^[\w\s,-]+$/;
 
+/** `translate(x y) rotate(a [cx cy]) scale(s [sy])` and nothing else: no url(), no matrix(), no expressions. */
+function isSafeTransform(value: string): boolean {
+  const calls = value.trim().split(")");
+  if (calls.pop()?.trim() !== "" || calls.length === 0) return false;
+  return calls.every((call) => {
+    const match = /^\s*(translate|rotate|scale)\(([-\d.,\se]+)$/i.exec(call);
+    if (!match) return false;
+    const numbers = match[2]!.trim().split(/[\s,]+/);
+    return numbers.length >= 1 && numbers.length <= 3 && numbers.every((n) => NUMBER.test(n));
+  });
+}
+
 function isSafeValue(name: string, value: string): boolean {
   switch (name) {
+    case "transform":
+      return isSafeTransform(value);
+    case "opacity":
+      return NUMBER.test(value) && Number(value) >= 0 && Number(value) <= 1;
     case "xmlns":
       return value === SVG_NAMESPACE;
     case "fill":

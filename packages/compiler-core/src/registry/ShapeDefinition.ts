@@ -1,6 +1,6 @@
 import type { ParamDefinition } from "./ParamDefinition.js";
 
-export type ShapeCategory = "shape" | "connection";
+export type ShapeCategory = "shape" | "connection" | "group";
 
 export interface ShapeDefinition {
   readonly name: string;

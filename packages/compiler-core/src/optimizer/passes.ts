@@ -17,6 +17,8 @@ const num = (value: number | string | undefined): number => Number(value);
  * never removed by geometry-based passes.
  */
 function paintedBox(shape: ResolvedShape): Box | null {
+  // Inside a transformed group, or rotated, the raw coordinates are not where the shape lands.
+  if (shape.groupId !== undefined || num(shape.params.rotacion ?? 0) !== 0) return null;
   const p = shape.params;
   switch (shape.kind) {
     case "crear_circulo":
@@ -109,7 +111,9 @@ export const removeOccludedShapes: IScenePass = {
       const box = paintedBox(shape);
       if (!box) return;
       const occluded = scene.shapes.slice(index + 1).some((later) => {
-        if (later.kind !== "crear_rectangulo" || !isOpaque(later.params.color)) return false;
+        if (later.kind !== "crear_rectangulo" || !isOpaque(later.params.color) || num(later.params.opacidad ?? 1) !== 1) {
+          return false;
+        }
         const laterBox = paintedBox(later);
         return laterBox !== null && covers(laterBox, box);
       });
