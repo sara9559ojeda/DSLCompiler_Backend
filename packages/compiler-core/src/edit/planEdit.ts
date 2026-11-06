@@ -1,7 +1,7 @@
 import type { ParamDefinition } from "../registry/ParamDefinition.js";
 import { NAMED_COLORS } from "../registry/colors.config.js";
 import { GROUP_DEFINITION, SHAPE_DEFINITIONS } from "../registry/shapes.config.js";
-import type { ParamValue, ResolvedGroup, ResolvedShape, Scene, SourceOrigin } from "../semantic/Scene.js";
+import type { ParamOrigin, ParamValue, ResolvedGroup, ResolvedShape, Scene, SourceOrigin } from "../semantic/Scene.js";
 import type { Span } from "../ast/Span.js";
 import { groupChain } from "../semantic/groupTransform.js";
 
@@ -119,15 +119,49 @@ export function planEdit(source: string, scene: Scene, request: EditRequest): Ed
   const origin = target.kind === "shape" ? target.shape.origin : target.group.origin;
   if (!origin) return refuse("no-source", "Esta figura no tiene un origen en el código.");
 
-  if (origin.dynamic && !request.allowShared) {
-    return refuse(
-      "shared",
-      `La genera un bucle o una función (${origin.instances} veces): cambiarla aquí afectaría a todas. Edita el código, o confirma el cambio para todas.`,
-      { span: origin.callSpan, instances: origin.instances },
-    );
-  }
+  if (origin.dynamic && !request.allowShared) return sharedRefusal(origin);
 
   return request.kind === "delete" ? planDelete(source, scene, target, origin, request) : planSetParams(target, origin, request);
+}
+
+/**
+ * Asks "could these parameters be edited visually?" without building an edit.
+ * A drag calls this when it starts, so it can refuse up front (and say why)
+ * instead of letting the user move something that will snap back.
+ * Returns null when every named parameter can be written.
+ */
+export function checkEditable(
+  scene: Scene,
+  targetId: string,
+  paramNames: readonly string[],
+  allowShared = false,
+): Extract<EditPlan, { ok: false }> | null {
+  const target = findTarget(scene, targetId);
+  if (!target) return refuse("unknown-target", `No existe '${targetId}' en la escena actual.`) as Extract<EditPlan, { ok: false }>;
+  const origin = target.kind === "shape" ? target.shape.origin : target.group.origin;
+  if (!origin) return refuse("no-source", "Esta figura no tiene un origen en el código.") as Extract<EditPlan, { ok: false }>;
+  if (origin.dynamic && !allowShared) return sharedRefusal(origin) as Extract<EditPlan, { ok: false }>;
+  for (const name of paramNames) {
+    const paramOrigin = origin.params[name];
+    if (paramOrigin?.editability === "expression") return expressionRefusal(name, paramOrigin) as Extract<EditPlan, { ok: false }>;
+  }
+  return null;
+}
+
+function sharedRefusal(origin: SourceOrigin): EditPlan {
+  return refuse(
+    "shared",
+    `La genera un bucle o una función (${origin.instances} veces): cambiarla aquí afectaría a todas. Edita el código, o confirma el cambio para todas.`,
+    { span: origin.callSpan, instances: origin.instances },
+  );
+}
+
+function expressionRefusal(name: string, paramOrigin: ParamOrigin): EditPlan {
+  return refuse(
+    "expression",
+    `'${name}' se calcula con una expresión${paramOrigin.dependsOn?.length ? ` (usa ${paramOrigin.dependsOn.join(", ")})` : ""}; no la reemplazo por un número. Edítala en el código.`,
+    { dependsOn: paramOrigin.dependsOn ?? [], ...(paramOrigin.span ? { span: paramOrigin.span } : {}) },
+  );
 }
 
 function planSetParams(target: Target, origin: SourceOrigin, request: Extract<EditRequest, { kind: "setParams" }>): EditPlan {
@@ -157,11 +191,7 @@ function planSetParams(target: Target, origin: SourceOrigin, request: Extract<Ed
         appended.push(`${name}=${literal.text}`);
         break;
       case "expression":
-        return refuse(
-          "expression",
-          `'${name}' se calcula con una expresión${paramOrigin.dependsOn?.length ? ` (usa ${paramOrigin.dependsOn.join(", ")})` : ""}; no la reemplazo por un número. Edítala en el código.`,
-          { dependsOn: paramOrigin.dependsOn ?? [], ...(paramOrigin.span ? { span: paramOrigin.span } : {}) },
-        );
+        return expressionRefusal(name, paramOrigin);
     }
     written.push(`${name}=${literal.text}`);
   }

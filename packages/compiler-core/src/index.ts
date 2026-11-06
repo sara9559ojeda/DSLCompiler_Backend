@@ -54,6 +54,7 @@ export type { Span } from "./ast/Span.js";
 export { walkExpression, walkStatements } from "./ast/walk.js";
 export {
   planEdit,
+  checkEditable,
   applyChanges,
   formatNumber,
   type EditRequest,

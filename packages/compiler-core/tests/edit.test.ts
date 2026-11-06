@@ -74,11 +74,7 @@ describe("editing literals in place", () => {
   });
 
   it("edits positional arguments in place", () => {
-    const { source } = edit("conectar(a, b);\n".replace("conectar(a, b);\n", "a = crear_circulo(5, 10, 10);\n"), {
-      kind: "setParams",
-      targetId: "a",
-      params: { x: 99 },
-    });
+    const { source } = edit("a = crear_circulo(5, 10, 10);\n", { kind: "setParams", targetId: "a", params: { x: 99 } });
     // 'radio, x, y' are required params written positionally.
     expect(source).toBe("a = crear_circulo(5, 99, 10);\n");
   });
@@ -305,9 +301,7 @@ describe("source mapping", () => {
     expect(scene.shapes.map((s) => s.instance)).toEqual([0, 1, 2, 3]);
   });
 
-  it("keeps ids stable when values are edited, and when an unrelated statement is added above", () => {
-    const base = "a = crear_circulo(radio=5, x=1, y=1);\nfor_loop_marker = 1;\n";
-    void base;
+  it("keeps ids stable when values are edited", () => {
     const loop = "para (let i = 0; i < 3; i = i + 1) { crear_circulo(radio=5, x=i, y=0); }";
     const ids = compile(loop).shapes.map((s) => s.id);
     expect(compile(loop.replace("radio=5", "radio=9")).shapes.map((s) => s.id)).toEqual(ids);
