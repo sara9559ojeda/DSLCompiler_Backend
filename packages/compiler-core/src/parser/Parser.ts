@@ -234,9 +234,9 @@ export class Parser {
     const keyword = this.advance();
     this.expect(TokenType.LParen, "SYN-004", "Se esperaba '(' después de 'grupo'.", "Escribe: grupo(x=0, y=0, escala=1) { ... }");
     const args = this.parseArguments();
-    this.expect(TokenType.RParen, "SYN-005", "Se esperaba ')' para cerrar los argumentos.");
+    const close = this.expect(TokenType.RParen, "SYN-005", "Se esperaba ')' para cerrar los argumentos.");
     const body = this.parseBlock();
-    return new GroupNode(args, body, keyword.position, this.spanFrom(keyword));
+    return new GroupNode(args, body, keyword.position, this.spanFrom(keyword), close.offset);
   }
 
   private parseReturn(): ReturnNode {

@@ -80,6 +80,8 @@ export class GroupNode {
     public readonly body: BlockNode,
     public readonly position: SourcePosition,
     public readonly span: Span = NO_SPAN,
+    /** Offset of the ')' that closes the argument list (where a missing argument can be inserted). */
+    public readonly closeOffset: number = 0,
   ) {}
 }
 

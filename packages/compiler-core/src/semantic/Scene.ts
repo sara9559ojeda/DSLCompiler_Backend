@@ -38,8 +38,16 @@ export interface SourceOrigin {
   readonly site: number;
   /** The whole call (`crear_circulo(...)`), without the trailing ';'. */
   readonly callSpan: Span;
+  /** The whole statement without its ';': `c1 = crear_circulo(...)` for a binding, the call itself otherwise, the whole block for a group. */
+  readonly statementSpan: Span;
+  /** Where a missing argument can be appended: right after the last argument (or just before the ')' of an empty list). */
+  readonly appendAt: number;
+  /** True when the call already has arguments, so an appended one needs a ", " first. */
+  readonly hasArgs: boolean;
   /** True when the site sits inside a loop or function: editing it affects every instance. */
   readonly dynamic: boolean;
+  /** How many shapes this site produced in this run (> 1 for a loop body or a called function). */
+  readonly instances: number;
   readonly params: Readonly<Record<string, ParamOrigin>>;
 }
 

@@ -52,6 +52,25 @@ export type {
 } from "./semantic/Scene.js";
 export type { Span } from "./ast/Span.js";
 export { walkExpression, walkStatements } from "./ast/walk.js";
+export {
+  planEdit,
+  applyChanges,
+  formatNumber,
+  type EditRequest,
+  type EditPlan,
+  type EditRefusal,
+  type TextChange,
+} from "./edit/planEdit.js";
+export {
+  shapeBox,
+  moveParams,
+  handlesFor,
+  resizeParams,
+  type Box,
+  type Handle,
+  type HandleId,
+} from "./edit/geometry.js";
+export { groupChain, toCanvasSpace, toLocalSpace, vectorToLocal, type Point } from "./semantic/groupTransform.js";
 export { TokenType, KEYWORDS } from "./lexer/TokenType.js";
 export { BUILTIN_FUNCTIONS, type BuiltinFunction } from "./semantic/builtins.js";
 export type { AnalysisOptions } from "./semantic/SemanticAnalyzer.js";

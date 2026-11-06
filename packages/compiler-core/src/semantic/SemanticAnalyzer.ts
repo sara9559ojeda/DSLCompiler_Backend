@@ -11,6 +11,7 @@ import {
   DEFAULT_EXECUTION_LIMITS,
   type ExecutionLimits,
 } from "../config/compiler.config.js";
+import type { Span } from "../ast/Span.js";
 import type { ProgramNode } from "../ast/nodes/ProgramNode.js";
 import { CommandCallNode } from "../ast/nodes/CommandCallNode.js";
 import type { ArgumentNode } from "../ast/nodes/ArgumentNode.js";
@@ -158,6 +159,8 @@ type Flow = { readonly value: Value } | undefined;
 
 type ArgOutcome = { ok: true; value: ParamValue } | { ok: false };
 
+type MutableOrigin = { -readonly [K in keyof SourceOrigin]: SourceOrigin[K] };
+
 interface SiteInfo {
   readonly site: number;
   readonly dynamic: boolean;
@@ -205,7 +208,7 @@ export class SemanticAnalyzer implements IValueVisitor<Value | undefined> {
   private readonly functions = new Map<string, FunctionDeclNode>();
   private readonly topLevelFunctions = new Set<FunctionDeclNode>();
   private readonly sites = new Map<object, SiteInfo>();
-  private readonly siteOrigins = new Map<object, SourceOrigin>();
+  private readonly siteOrigins = new Map<object, MutableOrigin>();
   private readonly instanceCounters = new Map<number, number>();
   private readonly groupStack: string[] = [];
   private readonly limits: ExecutionLimits;
@@ -252,6 +255,8 @@ export class SemanticAnalyzer implements IValueVisitor<Value | undefined> {
   }
 
   private buildResult(): SemanticAnalysisResult {
+    // Origins are shared by every instance of a call site; now that the run is over, say how many there were.
+    for (const origin of this.siteOrigins.values()) origin.instances = this.instanceCounters.get(origin.site) ?? 0;
     return {
       scene: {
         canvas: { width: CANVAS_WIDTH, height: CANVAS_HEIGHT },
@@ -487,7 +492,7 @@ export class SemanticAnalyzer implements IValueVisitor<Value | undefined> {
   /** `id = crear_xxx(...)`: runs the command and names the resulting shape. */
   private bindShape(node: AssignmentNode, call: CommandCallNode, definition: ShapeDefinition): void {
     if (!this.checkNameFree(node.identifier, node.position)) return;
-    const result = this.executeShapeCall(call, definition, node.identifier);
+    const result = this.executeShapeCall(call, definition, node.identifier, node.span);
     if (result === undefined) return;
     if (definition.category !== "shape" || result.t !== "shape") {
       this.error(
@@ -557,7 +562,7 @@ export class SemanticAnalyzer implements IValueVisitor<Value | undefined> {
       id,
       ...(parentId ? { parentId } : {}),
       params: resolved.params as Readonly<Record<string, number>>,
-      origin: this.originFor(node, node.position, node.span, resolved.origins, siteInfo),
+      origin: this.originFor(node, node.span, node.span, this.appendPoint(node.args, node.closeOffset), resolved.origins, siteInfo),
     });
 
     this.groupStack.push(id);
@@ -682,11 +687,23 @@ export class SemanticAnalyzer implements IValueVisitor<Value | undefined> {
 
   // ---- shape commands ----
 
-  private executeShapeCall(call: CommandCallNode, definition: ShapeDefinition, bindName: string | undefined): Value | undefined {
+  private executeShapeCall(
+    call: CommandCallNode,
+    definition: ShapeDefinition,
+    bindName: string | undefined,
+    statementSpan?: Span,
+  ): Value | undefined {
     const resolved = this.resolveArguments(call.name, call.args, definition, call.position, "el comando");
     if (!resolved) return undefined;
     const siteInfo = this.sites.get(call);
-    const origin = this.originFor(call, call.position, call.span, resolved.origins, siteInfo);
+    const origin = this.originFor(
+      call,
+      call.span,
+      statementSpan ?? call.span,
+      this.appendPoint(call.args, call.span.end - 1),
+      resolved.origins,
+      siteInfo,
+    );
 
     if (definition.category === "connection") {
       if (this.connections.length >= this.limits.maxShapes) this.tooManyElements(call.position);
@@ -734,17 +751,31 @@ export class SemanticAnalyzer implements IValueVisitor<Value | undefined> {
     return id;
   }
 
+  /** Where `name=value` goes when a parameter was left to its default: after the last argument, else before the ')'. */
+  private appendPoint(args: readonly ArgumentNode[], closeOffset: number): { appendAt: number; hasArgs: boolean } {
+    const last = args.at(-1);
+    return last ? { appendAt: last.span.end, hasArgs: true } : { appendAt: closeOffset, hasArgs: false };
+  }
+
   private originFor(
     node: object,
-    position: SourcePosition,
-    callSpan: { start: number; end: number },
+    callSpan: Span,
+    statementSpan: Span,
+    append: { appendAt: number; hasArgs: boolean },
     params: Record<string, ParamOrigin>,
     siteInfo: SiteInfo | undefined,
-  ): SourceOrigin {
+  ): MutableOrigin {
     const cached = this.siteOrigins.get(node);
     if (cached) return cached;
-    void position;
-    const origin: SourceOrigin = { site: siteInfo?.site ?? 0, callSpan, dynamic: siteInfo?.dynamic ?? false, params };
+    const origin: MutableOrigin = {
+      site: siteInfo?.site ?? 0,
+      callSpan,
+      statementSpan,
+      ...append,
+      dynamic: siteInfo?.dynamic ?? false,
+      instances: 0,
+      params,
+    };
     this.siteOrigins.set(node, origin);
     return origin;
   }

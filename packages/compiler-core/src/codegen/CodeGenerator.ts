@@ -1,5 +1,6 @@
 import type { ResolvedGroup, Scene } from "../semantic/Scene.js";
 import type { IShapeRenderer } from "./IShapeRenderer.js";
+import { groupChain } from "../semantic/groupTransform.js";
 
 /** Walks the Scene IR and delegates all drawing to the injected renderer (SRP + DIP). */
 export class CodeGenerator {
@@ -15,7 +16,7 @@ export class CodeGenerator {
     // push what it enters.
     let open: string[] = [];
     for (const shape of scene.shapes) {
-      const target = this.chainOf(shape.groupId, groupsById);
+      const target = groupChain(shape.groupId, groupsById);
       let common = 0;
       while (common < open.length && common < target.length && open[common] === target[common]!.id) common += 1;
       for (let index = open.length; index > common; index -= 1) body.push(this.renderer.closeGroup());
@@ -33,16 +34,5 @@ export class CodeGenerator {
     }
 
     return this.renderer.wrapDocument(body.join(""), scene.canvas);
-  }
-
-  /** Outermost → innermost groups containing `groupId`. */
-  private chainOf(groupId: string | undefined, groups: ReadonlyMap<string, ResolvedGroup>): ResolvedGroup[] {
-    const chain: ResolvedGroup[] = [];
-    let current = groupId === undefined ? undefined : groups.get(groupId);
-    while (current) {
-      chain.unshift(current);
-      current = current.parentId === undefined ? undefined : groups.get(current.parentId);
-    }
-    return chain;
   }
 }

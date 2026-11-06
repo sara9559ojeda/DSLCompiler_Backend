@@ -2,11 +2,7 @@ import { DEFAULT_STROKE_WIDTH } from "../registry/dsl-defaults.config.js";
 import { SVG_FONT_FAMILY, ARROW_LENGTH, ARROW_ANGLE_RADIANS } from "../config/compiler.config.js";
 import type { CanvasConfig, ResolvedConnection, ResolvedGroup, ResolvedShape } from "../semantic/Scene.js";
 import type { IShapeRenderer } from "./IShapeRenderer.js";
-
-interface Point {
-  readonly x: number;
-  readonly y: number;
-}
+import { toCanvasSpace, type Point } from "../semantic/groupTransform.js";
 
 const escapeXml = (text: string): string =>
   text
@@ -27,8 +23,6 @@ export interface SvgRenderOptions {
    */
   readonly embedIds?: boolean;
 }
-
-const DEG_TO_RAD = Math.PI / 180;
 
 /** Only concrete IShapeRenderer today; produces the SVG markup for each shape kind. */
 export class SvgShapeRenderer implements IShapeRenderer {
@@ -70,8 +64,8 @@ export class SvgShapeRenderer implements IShapeRenderer {
     to: ResolvedShape,
     groups: ReadonlyMap<string, ResolvedGroup> = new Map(),
   ): string {
-    const start = this.toCanvasSpace(this.getAnchor(from), from.groupId, groups);
-    const end = this.toCanvasSpace(this.getAnchor(to), to.groupId, groups);
+    const start = toCanvasSpace(this.getAnchor(from), from.groupId, groups);
+    const end = toCanvasSpace(this.getAnchor(to), to.groupId, groups);
     const color = String(connection.params.color);
 
     let markup = `<line x1="${start.x}" y1="${start.y}" x2="${end.x}" y2="${end.y}" stroke="${color}" stroke-width="${DEFAULT_STROKE_WIDTH}" />`;
@@ -124,22 +118,6 @@ export class SvgShapeRenderer implements IShapeRenderer {
       default:
         return { x: Number(p.x), y: Number(p.y) };
     }
-  }
-
-  /** Applies each enclosing group's transform, innermost first: scale, then rotate, then translate. */
-  private toCanvasSpace(point: Point, groupId: string | undefined, groups: ReadonlyMap<string, ResolvedGroup>): Point {
-    let result = point;
-    let current = groupId === undefined ? undefined : groups.get(groupId);
-    while (current) {
-      const { x = 0, y = 0, escala = 1, rotacion = 0 } = current.params;
-      const scaledX = result.x * escala;
-      const scaledY = result.y * escala;
-      const cos = Math.cos(rotacion * DEG_TO_RAD);
-      const sin = Math.sin(rotacion * DEG_TO_RAD);
-      result = { x: scaledX * cos - scaledY * sin + x, y: scaledX * sin + scaledY * cos + y };
-      current = current.parentId === undefined ? undefined : groups.get(current.parentId);
-    }
-    return result;
   }
 
   private renderArrowhead(start: Point, end: Point, color: string): string {
