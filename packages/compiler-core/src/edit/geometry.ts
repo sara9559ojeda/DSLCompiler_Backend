@@ -33,6 +33,7 @@ export function shapeBox(shape: ResolvedShape): Box | null {
     case "crear_circulo":
       return { x: n(p.x) - n(p.radio), y: n(p.y) - n(p.radio), width: n(p.radio) * 2, height: n(p.radio) * 2 };
     case "crear_rectangulo":
+    case "nodo":
       return { x: n(p.x), y: n(p.y), width: n(p.ancho), height: n(p.alto) };
     case "crear_linea": {
       const x = Math.min(n(p.x1), n(p.x2));
@@ -57,6 +58,7 @@ export function moveParams(shape: ResolvedShape, dx: number, dy: number): Record
     case "crear_circulo":
     case "crear_rectangulo":
     case "crear_texto":
+    case "nodo":
       return { x: n(p.x) + dx, y: n(p.y) + dy };
     default:
       return {};

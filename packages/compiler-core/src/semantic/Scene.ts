@@ -23,6 +23,8 @@ export type ParamEditability =
 
 export interface ParamOrigin {
   readonly editability: ParamEditability;
+  /** The whole `name=value` argument, so a visual "reset" can remove it cleanly. */
+  readonly argSpan?: Span;
   /** Source range of the value (absent for `default`). */
   readonly span?: Span;
   /** Variables an `expression` reads: where the user would edit instead. */
@@ -46,6 +48,8 @@ export interface SourceOrigin {
   readonly hasArgs: boolean;
   /** True when the site sits inside a loop or function: editing it affects every instance. */
   readonly dynamic: boolean;
+  /** `diagrama flujo { }` was written without parentheses: appending an argument must add them. */
+  readonly parenless?: boolean;
   /** How many shapes this site produced in this run (> 1 for a loop body or a called function). */
   readonly instances: number;
   readonly params: Readonly<Record<string, ParamOrigin>>;
@@ -76,6 +80,15 @@ export interface ResolvedGroup {
   /** x, y (translation), escala, rotacion (degrees), opacidad: all numbers. */
   readonly params: Readonly<Record<string, number>>;
   readonly origin?: SourceOrigin;
+  /** Present for `diagrama` blocks (which are groups): how its nodes were laid out. */
+  readonly diagram?: {
+    readonly type: string;
+    readonly direction: "vertical" | "horizontal";
+    readonly spacing: number;
+    /** Ids of the nodes the layout engine placed (the rest were pinned by x/y written in the source). */
+    readonly autoNodes: readonly string[];
+    readonly pinnedNodes: readonly string[];
+  };
 }
 
 export interface Scene {

@@ -12,6 +12,17 @@ const escapeXml = (text: string): string =>
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&apos;");
 
+const NODE_STROKE = "#06232d";
+const round2 = (value: number): number => Math.round(value * 100) / 100;
+
+/** Black or white text, whichever reads better on a `#rrggbb` fill. */
+function readableOn(fill: string): string {
+  const match = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})/i.exec(fill);
+  if (!match) return "#000000";
+  const [r, g, b] = [match[1]!, match[2]!, match[3]!].map((hex) => parseInt(hex, 16));
+  return (0.299 * r! + 0.587 * g! + 0.114 * b!) / 255 > 0.6 ? "#000000" : "#ffffff";
+}
+
 type Params = Readonly<Record<string, number | string>>;
 type ShapeDrawer = (params: Params, extras: string) => string;
 
@@ -42,6 +53,7 @@ export class SvgShapeRenderer implements IShapeRenderer {
       (p, e) =>
         `<line x1="${p.x1}" y1="${p.y1}" x2="${p.x2}" y2="${p.y2}" stroke="${p.color}" stroke-width="${DEFAULT_STROKE_WIDTH}"${e} />`,
     ],
+    ["nodo", (p, e) => this.drawNode(p, e)],
     [
       "crear_texto",
       (p, e) =>
@@ -64,14 +76,19 @@ export class SvgShapeRenderer implements IShapeRenderer {
     to: ResolvedShape,
     groups: ReadonlyMap<string, ResolvedGroup> = new Map(),
   ): string {
-    const start = toCanvasSpace(this.getAnchor(from), from.groupId, groups);
-    const end = toCanvasSpace(this.getAnchor(to), to.groupId, groups);
+    const fromCenter = toCanvasSpace(this.getAnchor(from), from.groupId, groups);
+    const toCenter = toCanvasSpace(this.getAnchor(to), to.groupId, groups);
+    // A line between two diagram nodes starts and ends on their outlines, not under them.
+    const start = this.clipToNode(from, fromCenter, toCenter);
+    const end = this.clipToNode(to, toCenter, fromCenter);
     const color = String(connection.params.color);
 
     let markup = `<line x1="${start.x}" y1="${start.y}" x2="${end.x}" y2="${end.y}" stroke="${color}" stroke-width="${DEFAULT_STROKE_WIDTH}" />`;
     if (connection.params.tipo === "flecha") {
       markup += this.renderArrowhead(start, end, color);
     }
+    const caption = connection.params.etiqueta;
+    if (typeof caption === "string" && caption !== "") markup += this.renderCaption(caption, start, end, color);
     return markup;
   }
 
@@ -110,6 +127,7 @@ export class SvgShapeRenderer implements IShapeRenderer {
     const p = shape.params;
     switch (shape.kind) {
       case "crear_rectangulo":
+      case "nodo":
         return { x: Number(p.x) + Number(p.ancho) / 2, y: Number(p.y) + Number(p.alto) / 2 };
       case "crear_linea":
         return { x: (Number(p.x1) + Number(p.x2)) / 2, y: (Number(p.y1) + Number(p.y2)) / 2 };
@@ -118,6 +136,70 @@ export class SvgShapeRenderer implements IShapeRenderer {
       default:
         return { x: Number(p.x), y: Number(p.y) };
     }
+  }
+
+  private drawNode(p: Params, extras: string): string {
+    const x = Number(p.x);
+    const y = Number(p.y);
+    const w = Number(p.ancho);
+    const h = Number(p.alto);
+    const cx = x + w / 2;
+    const cy = y + h / 2;
+    const fill = String(p.color);
+    const outline = `fill="${fill}" stroke="${NODE_STROKE}" stroke-width="1.5"`;
+    let body: string;
+    switch (p.tipo) {
+      case "decision":
+        body = `<polygon points="${cx},${y} ${x + w},${cy} ${cx},${y + h} ${x},${cy}" ${outline} />`;
+        break;
+      case "circulo":
+        body = `<ellipse cx="${cx}" cy="${cy}" rx="${w / 2}" ry="${h / 2}" ${outline} />`;
+        break;
+      case "inicio":
+        body = `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${h / 2}" ${outline} />`;
+        break;
+      case "redondeado":
+        body = `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="10" ${outline} />`;
+        break;
+      default:
+        body = `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="3" ${outline} />`;
+    }
+    const label = `<text x="${cx}" y="${cy}" fill="${readableOn(fill)}" font-size="14" font-family="${SVG_FONT_FAMILY}" text-anchor="middle" dominant-baseline="central">${escapeXml(String(p.etiqueta))}</text>`;
+    return `<g${extras}>${body}${label}</g>`;
+  }
+
+  /** Where the segment from `center` towards `other` leaves the outline of a diagram node (the center for anything else). */
+  private clipToNode(shape: ResolvedShape, center: Point, other: Point): Point {
+    if (shape.kind !== "nodo") return center;
+    const dx = other.x - center.x;
+    const dy = other.y - center.y;
+    if (dx === 0 && dy === 0) return center;
+    const halfW = Number(shape.params.ancho) / 2;
+    const halfH = Number(shape.params.alto) / 2;
+    const ax = Math.abs(dx);
+    const ay = Math.abs(dy);
+    let t: number;
+    switch (shape.params.tipo) {
+      case "decision":
+        t = 1 / (ax / halfW + ay / halfH);
+        break;
+      case "circulo":
+        t = 1 / Math.hypot(dx / halfW, dy / halfH);
+        break;
+      default:
+        t = Math.min(ax === 0 ? Infinity : halfW / ax, ay === 0 ? Infinity : halfH / ay);
+    }
+    return { x: round2(center.x + dx * t), y: round2(center.y + dy * t) };
+  }
+
+  private renderCaption(text: string, start: Point, end: Point, color: string): string {
+    const mx = round2((start.x + end.x) / 2);
+    const my = round2((start.y + end.y) / 2);
+    const width = Math.round(text.length * 6.6 + 10);
+    return (
+      `<rect x="${round2(mx - width / 2)}" y="${my - 9}" width="${width}" height="18" fill="#ffffff" opacity="0.88" />` +
+      `<text x="${mx}" y="${my}" fill="${color}" font-size="12" font-family="${SVG_FONT_FAMILY}" text-anchor="middle" dominant-baseline="central">${escapeXml(text)}</text>`
+    );
   }
 
   private renderArrowhead(start: Point, end: Point, color: string): string {

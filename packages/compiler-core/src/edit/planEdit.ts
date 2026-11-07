@@ -1,6 +1,6 @@
 import type { ParamDefinition } from "../registry/ParamDefinition.js";
 import { NAMED_COLORS } from "../registry/colors.config.js";
-import { GROUP_DEFINITION, SHAPE_DEFINITIONS } from "../registry/shapes.config.js";
+import { DIAGRAM_DEFINITION, GROUP_DEFINITION, SHAPE_DEFINITIONS } from "../registry/shapes.config.js";
 import type { ParamOrigin, ParamValue, ResolvedGroup, ResolvedShape, Scene, SourceOrigin } from "../semantic/Scene.js";
 import type { Span } from "../ast/Span.js";
 import { groupChain } from "../semantic/groupTransform.js";
@@ -33,7 +33,11 @@ export type EditRequest =
       /** The user confirmed that a loop/function-generated shape should change for every instance. */
       readonly allowShared?: boolean;
     }
-  | { readonly kind: "delete"; readonly targetId: string; readonly allowShared?: boolean };
+  | { readonly kind: "delete"; readonly targetId: string; readonly allowShared?: boolean }
+  /** Removes written arguments (`x=..`, `y=..`) so the default applies again: for a diagram node, back to the automatic layout. */
+  | { readonly kind: "removeParams"; readonly targetId: string; readonly params: readonly string[]; readonly allowShared?: boolean }
+  /** Frees every node of a diagram that was pinned by hand (`x`/`y` written in the source). */
+  | { readonly kind: "resetLayout"; readonly targetId: string; readonly allowShared?: boolean };
 
 export type EditRefusal =
   | "unknown-target"
@@ -63,7 +67,7 @@ const refuse = (reason: EditRefusal, message: string, extra: Omit<Extract<EditPl
   ...extra,
 });
 
-const DEFINITIONS = new Map([...SHAPE_DEFINITIONS, GROUP_DEFINITION].map((definition) => [definition.name, definition]));
+const DEFINITIONS = new Map([...SHAPE_DEFINITIONS, GROUP_DEFINITION, DIAGRAM_DEFINITION].map((definition) => [definition.name, definition]));
 const MAX_MAGNITUDE = 1_000_000;
 
 /** `120`, `3.5`, never `1e-7` (the lexer has no exponents) nor `-0`; at most 2 decimals. */
@@ -121,7 +125,60 @@ export function planEdit(source: string, scene: Scene, request: EditRequest): Ed
 
   if (origin.dynamic && !request.allowShared) return sharedRefusal(origin);
 
-  return request.kind === "delete" ? planDelete(source, scene, target, origin, request) : planSetParams(target, origin, request);
+  switch (request.kind) {
+    case "delete":
+      return planDelete(source, scene, target, origin, request);
+    case "removeParams":
+      return planRemoveParams(request.targetId, origin, request.params);
+    case "resetLayout":
+      return planResetLayout(scene, target, request.targetId);
+    case "setParams":
+      return planSetParams(target, origin, request);
+  }
+}
+
+/**
+ * Removes written arguments with their separators, leaving the call
+ * well-formed: `nodo("a", x=1, y=2, color=rojo)` minus x,y is
+ * `nodo("a", color=rojo)`, and minus color is `nodo("a", x=1, y=2)`.
+ */
+function removalChanges(origin: SourceOrigin, names: readonly string[]): TextChange[] {
+  const items = Object.entries(origin.params)
+    .filter(([, param]) => param.argSpan !== undefined)
+    .map(([name, param]) => ({ name, span: param.argSpan!, removed: names.includes(name) }))
+    .sort((a, b) => a.span.start - b.span.start);
+  const changes: TextChange[] = [];
+  for (let index = 0; index < items.length; index += 1) {
+    if (!items[index]!.removed) continue;
+    let last = index;
+    while (items[last + 1]?.removed) last += 1;
+    const first = items[index]!.span.start;
+    const lastEnd = items[last]!.span.end;
+    const next = items[last + 1];
+    const previous = items[index - 1];
+    if (next) changes.push({ start: first, end: next.span.start, text: "" });
+    else if (previous) changes.push({ start: previous.span.end, end: lastEnd, text: "" });
+    else changes.push({ start: first, end: lastEnd, text: "" });
+    index = last;
+  }
+  return changes;
+}
+
+function planRemoveParams(targetId: string, origin: SourceOrigin, names: readonly string[]): EditPlan {
+  const changes = removalChanges(origin, names);
+  if (changes.length === 0) return { ok: true, changes: [], summary: "Sin cambios." };
+  return { ok: true, changes: normalize(changes), summary: `${targetId}: quitó ${names.join(", ")}` };
+}
+
+function planResetLayout(scene: Scene, target: Target, targetId: string): EditPlan {
+  if (target.kind !== "group" || !target.group.diagram) return refuse("unknown-target", `'${targetId}' no es un diagrama.`);
+  const changes: TextChange[] = [];
+  for (const shape of scene.shapes) {
+    if (shape.groupId !== targetId || shape.kind !== "nodo" || !shape.origin || shape.origin.dynamic) continue;
+    changes.push(...removalChanges(shape.origin, ["x", "y"]));
+  }
+  if (changes.length === 0) return { ok: true, changes: [], summary: "Todos los nodos ya están en posición automática." };
+  return { ok: true, changes: normalize(changes), summary: `${targetId}: restableció el layout` };
 }
 
 /**
@@ -165,7 +222,7 @@ function expressionRefusal(name: string, paramOrigin: ParamOrigin): EditPlan {
 }
 
 function planSetParams(target: Target, origin: SourceOrigin, request: Extract<EditRequest, { kind: "setParams" }>): EditPlan {
-  const kind = target.kind === "shape" ? target.shape.kind : "grupo";
+  const kind = target.kind === "shape" ? target.shape.kind : target.group.diagram ? "diagrama" : "grupo";
   const definition = DEFINITIONS.get(kind);
   const current = target.kind === "shape" ? target.shape.params : target.group.params;
   if (!definition) return refuse("unknown-target", `No se puede editar una figura de tipo '${kind}'.`);
@@ -197,7 +254,12 @@ function planSetParams(target: Target, origin: SourceOrigin, request: Extract<Ed
   }
 
   if (appended.length > 0) {
-    changes.push({ start: origin.appendAt, end: origin.appendAt, text: `${origin.hasArgs ? ", " : ""}${appended.join(", ")}` });
+    const list = appended.join(", ");
+    changes.push({
+      start: origin.appendAt,
+      end: origin.appendAt,
+      text: origin.parenless ? `(${list})` : `${origin.hasArgs ? ", " : ""}${list}`,
+    });
   }
   if (changes.length === 0) return { ok: true, changes: [], summary: "Sin cambios." };
 

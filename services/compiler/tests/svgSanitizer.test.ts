@@ -78,4 +78,18 @@ describe("SvgSanitizer: groups, opacity and transforms (language 2.0)", () => {
     const dirty = wrap('<g onload="x()" data-group-id="g1"><circle cx="1" cy="1" r="1" fill="red" data-shape-id="c" onclick="x()" /></g>');
     expect(sanitizer.sanitize(dirty)).toBe(wrap('<g><circle cx="1" cy="1" r="1" fill="red" /></g>'));
   });
+
+  it("keeps the compiler's own diagram output (nodes, captions, arrows) intact", () => {
+    const svg = createDefaultPipeline().compile(
+      'diagrama flujo { a = nodo("Inicio", tipo=inicio); b = nodo("Decide", tipo=decision); c = nodo("Red", tipo=circulo); d = nodo("<Fin> & co"); conectar(a, b); conectar(b, c, etiqueta="sí"); conectar(c, d); }',
+    ).svg!;
+    expect(svg).toContain("text-anchor");
+    expect(sanitize(svg)).toBe(svg);
+  });
+
+  it("rejects unknown text-anchor / dominant-baseline values", () => {
+    expect(sanitize('<svg xmlns="http://www.w3.org/2000/svg"><text x="1" y="1" text-anchor="url(#x)" dominant-baseline="x">a</text></svg>')).toBe(
+      '<svg xmlns="http://www.w3.org/2000/svg"><text x="1" y="1">a</text></svg>',
+    );
+  });
 });

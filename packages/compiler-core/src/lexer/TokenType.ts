@@ -33,6 +33,7 @@ export enum TokenType {
   Else = "KW_SINO",
   Return = "KW_RETORNAR",
   Group = "KW_GRUPO",
+  Diagram = "KW_DIAGRAMA",
   Eof = "EOF",
 }
 
@@ -46,4 +47,5 @@ export const KEYWORDS: Readonly<Record<string, TokenType>> = {
   sino: TokenType.Else,
   retornar: TokenType.Return,
   grupo: TokenType.Group,
+  diagrama: TokenType.Diagram,
 };

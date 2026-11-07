@@ -18,6 +18,7 @@ export const DIAGNOSTIC_CODES = {
   "SYN-010": "Palabra reservada usada como nombre",
   "SYN-011": "Cabecera de 'para' inválida",
   "SYN-012": "Se esperaba un nombre",
+  "SYN-013": "Falta el tipo de diagrama",
   "SEM-001": "Demasiadas instrucciones",
   "SEM-002": "Identificador ya declarado",
   "SEM-003": "Comando no asignable",
@@ -48,6 +49,8 @@ export const DIAGNOSTIC_CODES = {
   "SEM-028": "Las funciones solo se declaran en el nivel superior",
   "SEM-029": "La función no devuelve ningún valor",
   "SEM-030": "Resultado numérico inválido",
+  "SEM-031": "'nodo' fuera de un diagrama",
+  "SEM-032": "Tipo de diagrama desconocido",
 } as const;
 
 export type DiagnosticCode = keyof typeof DIAGNOSTIC_CODES;

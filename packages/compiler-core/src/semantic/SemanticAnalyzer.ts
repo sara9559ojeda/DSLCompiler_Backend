@@ -3,7 +3,10 @@ import type { DiagnosticCode } from "../diagnostics/DiagnosticCodes.js";
 import { closestMatch, didYouMean } from "../diagnostics/suggest.js";
 import type { ShapeDefinition } from "../registry/ShapeDefinition.js";
 import type { ParamDefinition, ParamType } from "../registry/ParamDefinition.js";
-import { GROUP_DEFINITION } from "../registry/shapes.config.js";
+import { DIAGRAM_DEFINITION, GROUP_DEFINITION } from "../registry/shapes.config.js";
+import { DIAGRAM_TYPES } from "../registry/dsl-defaults.config.js";
+import type { ILayoutEngine } from "../layout/LayoutEngine.js";
+import { DagreLayoutEngine } from "../layout/DagreLayoutEngine.js";
 import {
   CANVAS_WIDTH,
   CANVAS_HEIGHT,
@@ -62,6 +65,8 @@ export interface AnalysisOptions {
   readonly isCancelled?: () => boolean;
   /** Wall-clock budget in ms, on top of the deterministic step budget. */
   readonly deadlineMs?: number;
+  /** Places the nodes of `diagrama` blocks. Defaults to Dagre. */
+  readonly layoutEngine?: ILayoutEngine;
 }
 
 // ---- runtime values ----
@@ -161,6 +166,36 @@ type ArgOutcome = { ok: true; value: ParamValue } | { ok: false };
 
 type MutableOrigin = { -readonly [K in keyof SourceOrigin]: SourceOrigin[K] };
 
+/** One open `diagrama { }`: what the layout engine needs once the block has run. */
+interface DiagramFrame {
+  readonly groupId: string;
+  readonly groupIndex: number;
+  readonly type: string;
+  readonly nodeType: string;
+  readonly direction: "vertical" | "horizontal";
+  readonly spacing: number;
+  readonly nodes: { index: number; pinnedX: boolean; pinnedY: boolean }[];
+  readonly edges: { from: string; to: string }[];
+}
+
+const NODE_CHAR_WIDTH = 8.2;
+const NODE_DEFAULT_HEIGHT = 44;
+const DIAGRAM_MARGIN = 40;
+
+/** Node size from its label, so the layout can reserve room before anything is drawn. */
+function nodeSize(label: string, type: string): { width: number; height: number } {
+  const text = [...label].length * NODE_CHAR_WIDTH;
+  const clamp = (value: number, min: number, max: number): number => Math.min(max, Math.max(min, Math.round(value)));
+  if (type === "circulo") {
+    const diameter = clamp(text + 28, 64, 150);
+    return { width: diameter, height: diameter };
+  }
+  const width = clamp(text + 40, 96, 280);
+  return type === "decision"
+    ? { width: Math.round(width * 1.35), height: Math.round(NODE_DEFAULT_HEIGHT * 1.7) }
+    : { width, height: NODE_DEFAULT_HEIGHT };
+}
+
 interface SiteInfo {
   readonly site: number;
   readonly dynamic: boolean;
@@ -211,6 +246,8 @@ export class SemanticAnalyzer implements IValueVisitor<Value | undefined> {
   private readonly siteOrigins = new Map<object, MutableOrigin>();
   private readonly instanceCounters = new Map<number, number>();
   private readonly groupStack: string[] = [];
+  private readonly diagramStack: DiagramFrame[] = [];
+  private readonly layoutEngine: ILayoutEngine;
   private readonly limits: ExecutionLimits;
   private readonly globalScope = new Scope();
   private scope: Scope = this.globalScope;
@@ -224,6 +261,7 @@ export class SemanticAnalyzer implements IValueVisitor<Value | undefined> {
     private readonly options: AnalysisOptions = {},
   ) {
     this.limits = { ...DEFAULT_EXECUTION_LIMITS, ...options.limits };
+    this.layoutEngine = options.layoutEngine ?? new DagreLayoutEngine();
   }
 
   public analyze(program: ProgramNode): SemanticAnalysisResult {
@@ -259,13 +297,29 @@ export class SemanticAnalyzer implements IValueVisitor<Value | undefined> {
     for (const origin of this.siteOrigins.values()) origin.instances = this.instanceCounters.get(origin.site) ?? 0;
     return {
       scene: {
-        canvas: { width: CANVAS_WIDTH, height: CANVAS_HEIGHT },
+        canvas: this.canvasSize(),
         shapes: this.shapes,
         connections: this.connections,
         ...(this.groups.length > 0 ? { groups: this.groups } : {}),
       },
       diagnostics: this.diagnostics,
     };
+  }
+
+  /** The default canvas, grown when an auto-laid-out diagram would otherwise spill past it. */
+  private canvasSize(): { width: number; height: number } {
+    let width = CANVAS_WIDTH;
+    let height = CANVAS_HEIGHT;
+    const groups = new Map(this.groups.map((group) => [group.id, group]));
+    for (const shape of this.shapes) {
+      if (shape.kind !== "nodo" || !shape.groupId) continue;
+      const group = groups.get(shape.groupId);
+      const right = Number(group?.params.x ?? 0) + Number(shape.params.x) + Number(shape.params.ancho);
+      const bottom = Number(group?.params.y ?? 0) + Number(shape.params.y) + Number(shape.params.alto);
+      width = Math.max(width, Math.ceil(right + DIAGRAM_MARGIN));
+      height = Math.max(height, Math.ceil(bottom + DIAGRAM_MARGIN));
+    }
+    return { width, height };
   }
 
   // ---- source sites (stable identity for shapes) ----
@@ -494,7 +548,7 @@ export class SemanticAnalyzer implements IValueVisitor<Value | undefined> {
     if (!this.checkNameFree(node.identifier, node.position)) return;
     const result = this.executeShapeCall(call, definition, node.identifier, node.span);
     if (result === undefined) return;
-    if (definition.category !== "shape" || result.t !== "shape") {
+    if ((definition.category !== "shape" && definition.category !== "node") || result.t !== "shape") {
       this.error(
         "SEM-003",
         `El comando '${call.name}' no puede asignarse a un identificador.`,
@@ -550,7 +604,78 @@ export class SemanticAnalyzer implements IValueVisitor<Value | undefined> {
       : this.executeStatements((node.elseBranch as BlockNode).statements, new Scope(this.scope));
   }
 
+  private executeDiagram(node: GroupNode): Flow {
+    const spec = DIAGRAM_TYPES[node.diagram ?? ""];
+    if (!spec) {
+      this.error(
+        "SEM-032",
+        `Tipo de diagrama desconocido: '${node.diagram}'.`,
+        node.position,
+        didYouMean(closestMatch(node.diagram ?? "", Object.keys(DIAGRAM_TYPES))) ?? `Tipos disponibles: ${Object.keys(DIAGRAM_TYPES).join(", ")}.`,
+      );
+      return undefined;
+    }
+    const resolved = this.resolveArguments("diagrama", node.args, DIAGRAM_DEFINITION, node.position, "el diagrama");
+    if (!resolved) return undefined;
+
+    const siteInfo = this.sites.get(node);
+    const instance = siteInfo ? this.nextInstance(siteInfo.site) : 0;
+    const id = this.uniqueId(`diagrama@${siteInfo?.site ?? 0}${siteInfo?.dynamic ? `.${instance}` : ""}`);
+    const parentId = this.groupStack[this.groupStack.length - 1];
+    const direction = (resolved.params.direccion as "vertical" | "horizontal" | undefined) ?? spec.direction;
+    const spacing = Number(resolved.params.espaciado);
+    const origin = this.originFor(node, node.span, node.span, this.appendPoint(node.args, node.closeOffset), resolved.origins, siteInfo);
+    if (node.parenless) origin.parenless = true;
+
+    const groupIndex = this.groups.length;
+    this.groups.push({
+      id,
+      ...(parentId ? { parentId } : {}),
+      params: { x: Number(resolved.params.x), y: Number(resolved.params.y) },
+      origin,
+    });
+    const frame: DiagramFrame = { groupId: id, groupIndex, type: node.diagram!, nodeType: spec.nodeType, direction, spacing, nodes: [], edges: [] };
+
+    this.groupStack.push(id);
+    this.diagramStack.push(frame);
+    try {
+      const flow = this.executeStatements(node.body.statements, new Scope(this.scope));
+      this.layoutDiagram(frame);
+      return flow;
+    } finally {
+      this.diagramStack.pop();
+      this.groupStack.pop();
+    }
+  }
+
+  /** Runs the layout engine over the nodes the block declared and writes their final position into the scene. */
+  private layoutDiagram(frame: DiagramFrame): void {
+    const placed = frame.nodes.map((entry) => ({ entry, shape: this.shapes[entry.index]! }));
+    const positions = this.layoutEngine.layout(
+      placed.map(({ shape }) => ({ id: shape.id, width: Number(shape.params.ancho), height: Number(shape.params.alto) })),
+      frame.edges,
+      { direction: frame.direction, spacing: frame.spacing },
+    );
+    const autoNodes: string[] = [];
+    const pinnedNodes: string[] = [];
+    for (const { entry, shape } of placed) {
+      const auto = positions.get(shape.id) ?? { x: 0, y: 0 };
+      // A coordinate written in the source wins; the other axis (if any) still comes from the layout.
+      this.shapes[entry.index] = {
+        ...shape,
+        params: { ...shape.params, x: entry.pinnedX ? shape.params.x! : auto.x, y: entry.pinnedY ? shape.params.y! : auto.y },
+      };
+      (entry.pinnedX || entry.pinnedY ? pinnedNodes : autoNodes).push(shape.id);
+    }
+    const group = this.groups[frame.groupIndex]!;
+    this.groups[frame.groupIndex] = {
+      ...group,
+      diagram: { type: frame.type, direction: frame.direction, spacing: frame.spacing, autoNodes, pinnedNodes },
+    };
+  }
+
   private executeGroup(node: GroupNode): Flow {
+    if (node.diagram !== null) return this.executeDiagram(node);
     const resolved = this.resolveArguments("grupo", node.args, GROUP_DEFINITION, node.position, "el grupo");
     if (!resolved) return undefined;
 
@@ -571,6 +696,23 @@ export class SemanticAnalyzer implements IValueVisitor<Value | undefined> {
     } finally {
       this.groupStack.pop();
     }
+  }
+
+  /** Fills in what a `nodo` leaves to the diagram (shape, size, provisional position). Null after reporting if it is outside one. */
+  private prepareNode(call: CommandCallNode, params: Record<string, ParamValue>): { frame: DiagramFrame } | null {
+    const frame = this.diagramStack.at(-1);
+    if (!frame) {
+      this.error("SEM-031", "'nodo' solo puede usarse dentro de un bloque 'diagrama'.", call.position, 'Escribe: diagrama flujo { nodo("Inicio"); }');
+      return null;
+    }
+    const type = String(params.tipo ?? frame.nodeType);
+    const size = nodeSize(String(params.etiqueta), type);
+    params.tipo = type;
+    params.ancho ??= size.width;
+    params.alto ??= size.height;
+    params.x ??= 0;
+    params.y ??= 0;
+    return { frame };
   }
 
   private executeReturn(node: ReturnNode): Flow {
@@ -708,11 +850,19 @@ export class SemanticAnalyzer implements IValueVisitor<Value | undefined> {
     if (definition.category === "connection") {
       if (this.connections.length >= this.limits.maxShapes) this.tooManyElements(call.position);
       const { origen, destino, ...renderParams } = resolved.params;
+      const frame = this.diagramStack.at(-1);
+      if (frame) {
+        frame.edges.push({ from: String(origen), to: String(destino) });
+        // Inside a diagram a connection points unless it says otherwise.
+        if (resolved.origins.tipo?.editability === "default") renderParams.tipo = "flecha";
+      }
       this.connections.push({ fromId: String(origen), toId: String(destino), params: renderParams, origin });
       return VOID;
     }
 
     if (this.shapes.length >= this.limits.maxShapes) this.tooManyElements(call.position);
+    const node = definition.name === "nodo" ? this.prepareNode(call, resolved.params) : null;
+    if (definition.name === "nodo" && !node) return undefined;
     const instance = siteInfo ? this.nextInstance(siteInfo.site) : 0;
     const dynamic = siteInfo?.dynamic ?? false;
     const base = bindName ?? (dynamic ? call.name : `__shape_${this.shapes.length}`);
@@ -726,6 +876,13 @@ export class SemanticAnalyzer implements IValueVisitor<Value | undefined> {
       origin,
       instance,
     });
+    if (node) {
+      node.frame.nodes.push({
+        index: this.shapes.length - 1,
+        pinnedX: resolved.origins.x?.editability !== "default",
+        pinnedY: resolved.origins.y?.editability !== "default",
+      });
+    }
     return { t: "shape", id };
   }
 
@@ -816,7 +973,7 @@ export class SemanticAnalyzer implements IValueVisitor<Value | undefined> {
           hasError = true;
           continue;
         }
-        params[paramDef.name] = paramDef.defaultValue as ParamValue;
+        if (paramDef.defaultValue !== undefined) params[paramDef.name] = paramDef.defaultValue as ParamValue;
         origins[paramDef.name] = { editability: "default" };
         continue;
       }
@@ -827,7 +984,7 @@ export class SemanticAnalyzer implements IValueVisitor<Value | undefined> {
         continue;
       }
       params[paramDef.name] = outcome.value;
-      origins[paramDef.name] = this.classify(arg.value);
+      origins[paramDef.name] = { ...this.classify(arg.value), argSpan: arg.span };
     }
     return hasError ? null : { params, origins };
   }

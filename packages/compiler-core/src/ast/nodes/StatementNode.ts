@@ -82,6 +82,10 @@ export class GroupNode {
     public readonly span: Span = NO_SPAN,
     /** Offset of the ')' that closes the argument list (where a missing argument can be inserted). */
     public readonly closeOffset: number = 0,
+    /** Set for `diagrama <tipo> { ... }` (a group whose nodes are laid out automatically): the diagram type. */
+    public readonly diagram: string | null = null,
+    /** `diagrama flujo { }` written without an argument list. */
+    public readonly parenless: boolean = false,
   ) {}
 }
 

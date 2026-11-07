@@ -14,10 +14,11 @@ const ALLOWED_ELEMENTS: Readonly<Record<string, ReadonlySet<string>>> = {
   svg: new Set(["xmlns", "viewBox", "width", "height"]),
   g: new Set(["transform", "opacity"]),
   circle: new Set(["cx", "cy", "r", "fill", "opacity"]),
-  rect: new Set(["x", "y", "width", "height", "fill", "opacity", "transform"]),
+  rect: new Set(["x", "y", "width", "height", "rx", "fill", "stroke", "stroke-width", "opacity", "transform"]),
+  ellipse: new Set(["cx", "cy", "rx", "ry", "fill", "stroke", "stroke-width"]),
   line: new Set(["x1", "y1", "x2", "y2", "stroke", "stroke-width", "opacity"]),
-  polygon: new Set(["points", "fill"]),
-  text: new Set(["x", "y", "fill", "font-size", "font-family", "opacity", "transform"]),
+  polygon: new Set(["points", "fill", "stroke", "stroke-width"]),
+  text: new Set(["x", "y", "fill", "font-size", "font-family", "opacity", "transform", "text-anchor", "dominant-baseline"]),
 };
 
 const SVG_NAMESPACE = "http://www.w3.org/2000/svg";
@@ -54,6 +55,10 @@ function isSafeValue(name: string, value: string): boolean {
       return NUMBER_LIST.test(value);
     case "font-family":
       return FONT_FAMILY.test(value);
+    case "text-anchor":
+      return value === "start" || value === "middle" || value === "end";
+    case "dominant-baseline":
+      return value === "central" || value === "middle" || value === "alphabetic";
     default:
       return NUMBER.test(value);
   }

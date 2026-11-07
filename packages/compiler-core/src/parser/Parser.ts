@@ -129,6 +129,8 @@ export class Parser {
         return this.parseIf();
       case TokenType.Group:
         return this.parseGroup();
+      case TokenType.Diagram:
+        return this.parseDiagram();
       case TokenType.Return:
         return this.parseReturn();
       case TokenType.LBrace:
@@ -237,6 +239,21 @@ export class Parser {
     const close = this.expect(TokenType.RParen, "SYN-005", "Se esperaba ')' para cerrar los argumentos.");
     const body = this.parseBlock();
     return new GroupNode(args, body, keyword.position, this.spanFrom(keyword), close.offset);
+  }
+
+  /** `diagrama flujo { ... }` or `diagrama flujo(direccion="horizontal", espaciado=80) { ... }` */
+  private parseDiagram(): GroupNode {
+    const keyword = this.advance();
+    const type = this.expect(TokenType.Identifier, "SYN-013", "Se esperaba el tipo de diagrama después de 'diagrama'.", "Escribe: diagrama flujo { ... } (flujo, arquitectura, organigrama, proceso o red).");
+    let args: ArgumentNode[] = [];
+    let closeOffset = type.offset + type.length;
+    const parenless = !this.check(TokenType.LParen);
+    if (this.match(TokenType.LParen)) {
+      args = [...this.parseArguments()];
+      closeOffset = this.expect(TokenType.RParen, "SYN-005", "Se esperaba ')' para cerrar los argumentos.").offset;
+    }
+    const body = this.parseBlock();
+    return new GroupNode(args, body, keyword.position, this.spanFrom(keyword), closeOffset, type.lexeme, parenless);
   }
 
   private parseReturn(): ReturnNode {

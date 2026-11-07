@@ -6,6 +6,10 @@ import {
   CONNECTION_TYPES,
   DEFAULT_OPACITY,
   DEFAULT_ROTATION,
+  NODE_TYPES,
+  DIRECTIONS,
+  DEFAULT_DIAGRAM_SPACING,
+  DEFAULT_DIAGRAM_ORIGIN,
 } from "./dsl-defaults.config.js";
 
 const OPACITY_PARAM = { name: "opacidad", type: "number", required: false, defaultValue: DEFAULT_OPACITY } as const;
@@ -82,9 +86,38 @@ export const SHAPE_DEFINITIONS: readonly ShapeDefinition[] = [
         allowedValues: CONNECTION_TYPES,
       },
       { name: "color", type: "color", required: false, defaultValue: DEFAULT_SHAPE_COLOR },
+      // Only meaningful between two diagram nodes: a caption drawn at the middle of the line.
+      { name: "etiqueta", type: "string", required: false },
+    ],
+  },
+  {
+    // Valid only inside `diagrama { }`. x/y/ancho/alto have no default on purpose: absent means "let the layout decide".
+    name: "nodo",
+    category: "node",
+    params: [
+      { name: "etiqueta", type: "string", required: true },
+      { name: "tipo", type: "string", required: false, allowedValues: NODE_TYPES },
+      { name: "color", type: "color", required: false, defaultValue: "#1e88e5" },
+      { name: "x", type: "number", required: false },
+      { name: "y", type: "number", required: false },
+      { name: "ancho", type: "number", required: false },
+      { name: "alto", type: "number", required: false },
+      OPACITY_PARAM,
     ],
   },
 ];
+
+/** `diagrama <tipo>(...) { }`: a group (translated by x, y) whose `nodo`s are placed by the layout engine. */
+export const DIAGRAM_DEFINITION: ShapeDefinition = {
+  name: "diagrama",
+  category: "group",
+  params: [
+    { name: "x", type: "number", required: false, defaultValue: DEFAULT_DIAGRAM_ORIGIN },
+    { name: "y", type: "number", required: false, defaultValue: DEFAULT_DIAGRAM_ORIGIN },
+    { name: "direccion", type: "string", required: false, allowedValues: DIRECTIONS },
+    { name: "espaciado", type: "number", required: false, defaultValue: DEFAULT_DIAGRAM_SPACING },
+  ],
+};
 
 /**
  * `grupo(...) { ... }` is syntax (a block), not a registry command, but its
