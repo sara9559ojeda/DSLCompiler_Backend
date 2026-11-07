@@ -161,3 +161,20 @@ grupo(x=500, y=100, escala=0.5, rotacion=15) {
   r1 = crear_rectangulo(ancho=80, alto=40, x=0, y=0, color=azul);
 }
 ```
+
+## Diagramas con layout automático (`diagrama`)
+
+```
+diagrama <tipo> [ "(" argumentos ")" ] "{" instrucciones "}"
+```
+
+`<tipo>`: `flujo`, `arquitectura`, `organigrama`, `proceso`, `red`. Define la dirección, el espaciado y la forma de nodo por defecto.
+Los argumentos son opcionales: `x`, `y` (desplazamiento del diagrama, 40 por defecto), `direccion` (`vertical` | `horizontal`) y `espaciado`.
+
+Dentro del bloque (que admite bucles, funciones y condicionales como cualquier otro):
+
+- `nodo(etiqueta, tipo, color, x, y, ancho, alto, opacidad)`: `tipo` ∈ `caja`, `redondeado`, `inicio`, `decision`, `circulo`. Se puede asignar (`a = nodo("Inicio")`) y usar en `conectar`.
+- `conectar(origen, destino, tipo, color, etiqueta)`: dentro de un diagrama la conexión es una flecha salvo que se indique `tipo`.
+
+Un nodo **sin** `x`/`y` lo coloca el motor de layout (posición *automática*). Escribir `x` y/o `y` lo **fija** (posición *manual*) en ese eje; el resto sigue siendo automático. `nodo` fuera de `diagrama` es SEM-031; un tipo desconocido es SEM-032; `diagrama` sin tipo es SYN-013.
+El lienzo crece si el diagrama no cabe en 800×600. Las conexiones son rectas y arrancan en el contorno de cada nodo.

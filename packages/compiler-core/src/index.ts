@@ -86,7 +86,9 @@ export { DIAGNOSTIC_CODES, type DiagnosticCode } from "./diagnostics/DiagnosticC
 export { closestMatch, editDistance } from "./diagnostics/suggest.js";
 export type { ParamDefinition, ParamType } from "./registry/ParamDefinition.js";
 export type { ShapeDefinition, ShapeCategory } from "./registry/ShapeDefinition.js";
-export { SHAPE_DEFINITIONS, GROUP_DEFINITION } from "./registry/shapes.config.js";
+export { SHAPE_DEFINITIONS, GROUP_DEFINITION, DIAGRAM_DEFINITION } from "./registry/shapes.config.js";
+export { DIAGRAM_TYPES, NODE_TYPES, DIRECTIONS } from "./registry/dsl-defaults.config.js";
+export type { ILayoutEngine, LayoutNode, LayoutEdge, LayoutOptions, LayoutResult } from "./layout/LayoutEngine.js";
 export { NAMED_COLORS, DEFAULT_SHAPE_COLOR } from "./registry/colors.config.js";
 export {
   DEFAULT_FONT_SIZE,
