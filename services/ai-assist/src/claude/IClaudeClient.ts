@@ -4,5 +4,6 @@
  * the suite never makes a real network call or needs an API key.
  */
 export interface IClaudeClient {
-  complete(systemPrompt: string, userPrompt: string): Promise<string>;
+  /** `signal` aborts the request (the user cancelled or disconnected), so no tokens are spent for nobody. */
+  complete(systemPrompt: string, userPrompt: string, options?: { readonly signal?: AbortSignal }): Promise<string>;
 }

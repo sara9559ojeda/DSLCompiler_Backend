@@ -17,6 +17,10 @@ export {
 } from "./contracts/ProjectsContract.js";
 export {
   SuggestRequestSchema,
+  AssistRequestSchema,
+  MAX_ASSIST_PROMPT_LENGTH,
+  MAX_ASSIST_SOURCE_LENGTH,
+  type AssistRequestBody,
   ExplainErrorRequestSchema,
   type SuggestRequestBody,
   type ExplainErrorRequestBody,

@@ -44,3 +44,17 @@ inyectadas. En producción son `AnthropicClaudeClient` (HTTP real a la API
 de Anthropic) y `DslValidator` (el compilador real); los tests usan un
 `FakeClaudeClient` con respuestas guionadas para probar el flujo de
 reintento sin red ni costo.
+
+## `POST /assist` (asistente de IA)
+
+Body: `{ mode: "generate" | "modify" | "explain", prompt, source? }` (prompt ≤ 1000 caracteres, source ≤ 20 000; otros campos se descartan).
+
+- **generate**: programa nuevo a partir de una descripción.
+- **modify**: devuelve el programa **completo** modificado (conserva comentarios, orden y nombres); necesita `source`.
+- **explain**: explica el código y sus errores; los diagnósticos los calcula el servidor compilando `source`.
+
+Cada propuesta pasa por el compilador real. Si falla, se reintenta con los diagnósticos reales hasta `ASSIST_MAX_ATTEMPTS` intentos o `ASSIST_DEADLINE_MS`. La respuesta incluye `valid`, `diagnostics`, `svg` (vista previa renderizada por el compilador) y `attempts`. **Nada se aplica en el servidor**: el cliente muestra el diff y el usuario acepta o rechaza.
+
+Protecciones: el contenido del usuario va en etiquetas marcadas como datos (y se neutralizan intentos de cerrarlas), ningún campo del cliente llega al system prompt, cancelar la petición aborta la llamada al modelo, límites de tamaño, timeout, tokens máximos y, en el gateway, `AI_RATE_LIMIT_MAX` por ventana y cliente.
+
+Variables de entorno: `ANTHROPIC_API_KEY` (solo backend), `ANTHROPIC_MODEL`, `ANTHROPIC_MAX_TOKENS` (2048), `ANTHROPIC_TIMEOUT_MS` (30000), `ASSIST_MAX_ATTEMPTS` (3), `ASSIST_DEADLINE_MS` (45000), `ASSIST_MAX_OUTPUT_CHARS` (12000). Gateway: `AI_RATE_LIMIT_MAX` (10), `AI_RATE_LIMIT_WINDOW_MS` (60000).

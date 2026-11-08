@@ -51,6 +51,8 @@ export const DIAGNOSTIC_CODES = {
   "SEM-030": "Resultado numérico inválido",
   "SEM-031": "'nodo' fuera de un diagrama",
   "SEM-032": "Tipo de diagrama desconocido",
+  // Raised by the AI assistant (not the compiler) when a proposal is empty or too long to be considered.
+  "AI-001": "Respuesta del asistente inválida",
 } as const;
 
 export type DiagnosticCode = keyof typeof DIAGNOSTIC_CODES;

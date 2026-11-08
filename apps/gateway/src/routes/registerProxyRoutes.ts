@@ -19,6 +19,7 @@ export function registerProxyRoutes(fastify: FastifyInstance, upstreamClient: IU
       method: route.method,
       url: route.path,
       schema: route.bodySchema ? { body: route.bodySchema } : undefined,
+      ...(route.rateLimit ? { config: { rateLimit: { max: route.rateLimit.max, timeWindow: route.rateLimit.timeWindowMs } } } : {}),
       preHandler: route.requiresAuth ? [fastify.authenticate] : [],
       handler: async (request, reply) => {
         const headers: Record<string, string> = {};

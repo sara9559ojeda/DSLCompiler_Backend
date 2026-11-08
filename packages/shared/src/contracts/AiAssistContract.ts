@@ -15,6 +15,20 @@ const DiagnosticSchema = Type.Object({
   snippet: Type.Optional(Type.String({ maxLength: 1000 })),
 });
 
+/** Longest request the assistant accepts: bounds the tokens a single call can cost. */
+export const MAX_ASSIST_PROMPT_LENGTH = 1000;
+export const MAX_ASSIST_SOURCE_LENGTH = 20_000;
+
+export const AssistRequestSchema = Type.Object(
+  {
+    mode: Type.Union([Type.Literal("generate"), Type.Literal("modify"), Type.Literal("explain")]),
+    prompt: Type.String({ maxLength: MAX_ASSIST_PROMPT_LENGTH }),
+    source: Type.Optional(Type.String({ maxLength: MAX_ASSIST_SOURCE_LENGTH })),
+  },
+  { additionalProperties: false },
+);
+export type AssistRequestBody = Static<typeof AssistRequestSchema>;
+
 export const ExplainErrorRequestSchema = Type.Object({
   source: Type.String({ minLength: 1 }),
   diagnostics: Type.Array(DiagnosticSchema, { minItems: 1 }),

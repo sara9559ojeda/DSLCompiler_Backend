@@ -7,8 +7,9 @@ import {
   UpdateProjectRequestSchema,
   SuggestRequestSchema,
   ExplainErrorRequestSchema,
+  AssistRequestSchema,
 } from "@compiler-img/shared";
-import type { UpstreamTarget } from "../config/gateway.config.js";
+import { AI_RATE_LIMIT_MAX, AI_RATE_LIMIT_WINDOW_MS, type UpstreamTarget } from "../config/gateway.config.js";
 import type { UpstreamMethod } from "../proxy/IUpstreamClient.js";
 
 export interface ProxyRouteConfig {
@@ -21,6 +22,8 @@ export interface ProxyRouteConfig {
   /** When true, `fastify.authenticate` runs first and the original `Authorization` header is forwarded upstream. */
   readonly requiresAuth: boolean;
   readonly bodySchema?: object;
+  /** Overrides the gateway-wide rate limit for this route (per client IP). */
+  readonly rateLimit?: { readonly max: number; readonly timeWindowMs: number };
 }
 
 /**
@@ -113,6 +116,15 @@ export const ROUTES: readonly ProxyRouteConfig[] = [
     target: "ai",
     requiresAuth: false,
     bodySchema: SuggestRequestSchema,
+  },
+  {
+    method: "POST",
+    path: "/api/ai/assist",
+    upstreamPath: "/assist",
+    target: "ai",
+    requiresAuth: false,
+    bodySchema: AssistRequestSchema,
+    rateLimit: { max: AI_RATE_LIMIT_MAX, timeWindowMs: AI_RATE_LIMIT_WINDOW_MS },
   },
   {
     method: "POST",

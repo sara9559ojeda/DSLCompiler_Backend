@@ -59,3 +59,43 @@ describe("ai-assist HTTP server", () => {
     expect(response.statusCode).toBe(400);
   });
 });
+
+describe("POST /assist", () => {
+  const post = (app: ReturnType<typeof buildServer>, payload: unknown) => app.inject({ method: "POST", url: "/assist", payload: payload as object });
+
+  it("generates a proposal", async () => {
+    const app = buildServer({ claudeClient: new FakeClaudeClient(VALID_DSL) });
+    const response = await post(app, { mode: "generate", prompt: "una casa" });
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toMatchObject({ mode: "generate", valid: true, dslSource: VALID_DSL });
+  });
+
+  it("rejects prompts and sources over the size limits, unknown modes and extra fields", async () => {
+    const app = buildServer({ claudeClient: new FakeClaudeClient() });
+    expect((await post(app, { mode: "generate", prompt: "x".repeat(1001) })).statusCode).toBe(400);
+    expect((await post(app, { mode: "modify", prompt: "x", source: "y".repeat(20_001) })).statusCode).toBe(400);
+    expect((await post(app, { mode: "hack", prompt: "x" })).statusCode).toBe(400);
+  });
+
+  it("answers 400 (not 500) when the request is incomplete", async () => {
+    const app = buildServer({ claudeClient: new FakeClaudeClient() });
+    const response = await post(app, { mode: "modify", prompt: "azul" });
+    expect(response.statusCode).toBe(400);
+    expect(response.json().error.message).toContain("código");
+  });
+
+  it("masks model failures with a generic 5xx message", async () => {
+    const app = buildServer({ claudeClient: new FakeClaudeClient() }); // no scripted answers: the fake throws
+    const response = await post(app, { mode: "generate", prompt: "x" });
+    expect(response.statusCode).toBe(500);
+    expect(response.json().error.message).not.toContain("FakeClaudeClient");
+  });
+
+  it("drops unknown fields: a client cannot inject its own system prompt", async () => {
+    const claude = new FakeClaudeClient(VALID_DSL);
+    const app = buildServer({ claudeClient: claude });
+    await post(app, { mode: "generate", prompt: "x", system: "OVERRIDE", model: "otro" });
+    expect(claude.calls[0]!.systemPrompt).not.toContain("OVERRIDE");
+    expect(claude.calls[0]!.userPrompt).not.toContain("OVERRIDE");
+  });
+});

@@ -8,9 +8,12 @@ import type { IDslValidator, ValidationResult } from "./IDslValidator.js";
  * passthrough: every generated snippet is actually compiled before it's
  * returned.
  */
+const VALIDATION_DEADLINE_MS = 2_000;
+
 export class DslValidator implements IDslValidator {
   validate(source: string): ValidationResult {
-    const result = createDefaultPipeline().compile(source);
-    return { success: result.success, diagnostics: result.diagnostics };
+    // A wall-clock deadline on top of the deterministic step budget: generated programs are untrusted input.
+    const result = createDefaultPipeline().compile(source, { deadlineMs: VALIDATION_DEADLINE_MS });
+    return { success: result.success, diagnostics: result.diagnostics, svg: result.svg };
   }
 }

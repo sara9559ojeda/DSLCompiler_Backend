@@ -13,6 +13,10 @@ export const CORS_ORIGIN = process.env.CORS_ORIGIN ?? "*";
 export const RATE_LIMIT_MAX = Number(process.env.RATE_LIMIT_MAX ?? 100);
 export const RATE_LIMIT_WINDOW_MS = Number(process.env.RATE_LIMIT_WINDOW_MS ?? 60_000);
 
+/** The assistant calls a paid model, so it gets a much tighter per-client limit than the rest of the API. */
+export const AI_RATE_LIMIT_MAX = Number(process.env.AI_RATE_LIMIT_MAX ?? 10);
+export const AI_RATE_LIMIT_WINDOW_MS = Number(process.env.AI_RATE_LIMIT_WINDOW_MS ?? 60_000);
+
 export type UpstreamTarget = "compiler" | "ai" | "projects";
 
 export const UPSTREAM_TARGETS: Readonly<Record<UpstreamTarget, string>> = Object.freeze({
