@@ -1,4 +1,5 @@
 import Fastify, { type FastifyInstance } from "fastify";
+import { LANGUAGE_VERSION } from "@saramariaojeda9559/compiler-core";
 import type { IClaudeClient } from "../claude/IClaudeClient.js";
 import { AnthropicClaudeClient } from "../claude/AnthropicClaudeClient.js";
 import type { IDslValidator } from "../validation/IDslValidator.js";
@@ -47,7 +48,7 @@ export function buildServer(options: BuildServerOptions = {}): FastifyInstance {
     options.assistLimits ?? { maxAttempts: ASSIST_MAX_ATTEMPTS, deadlineMs: ASSIST_DEADLINE_MS, maxOutputChars: ASSIST_MAX_OUTPUT_CHARS },
   );
 
-  fastify.get("/health", async () => ({ status: "ok" }));
+  fastify.get("/health", async () => ({ status: "ok", languageVersion: LANGUAGE_VERSION }));
   registerSuggestRoute(fastify, { suggestionService });
   registerExplainErrorRoute(fastify, { explainErrorService });
   registerAssistRoute(fastify, { assistService });

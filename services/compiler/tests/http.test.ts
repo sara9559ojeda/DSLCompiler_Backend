@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { LANGUAGE_VERSION } from "@saramariaojeda9559/compiler-core";
 import { buildServer } from "../src/http/server.js";
 
 describe("Compiler HTTP server", () => {
@@ -6,7 +7,7 @@ describe("Compiler HTTP server", () => {
     const app = buildServer();
     const response = await app.inject({ method: "GET", url: "/health" });
     expect(response.statusCode).toBe(200);
-    expect(response.json()).toEqual({ status: "ok" });
+    expect(response.json()).toEqual({ status: "ok", languageVersion: LANGUAGE_VERSION });
   });
 
   it("POST /compile returns an SVG document for a valid program", async () => {

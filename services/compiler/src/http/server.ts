@@ -5,6 +5,7 @@ import {
   type CompileRequestBody,
   type ExportRequestBody,
 } from "@compiler-img/shared";
+import { LANGUAGE_VERSION } from "@saramariaojeda9559/compiler-core";
 import { CompilerApplication } from "../application/CompilerApplication.js";
 
 /**
@@ -14,7 +15,8 @@ import { CompilerApplication } from "../application/CompilerApplication.js";
 export function buildServer(app: CompilerApplication = new CompilerApplication()): FastifyInstance {
   const fastify = Fastify({ logger: false });
 
-  fastify.get("/health", async () => ({ status: "ok" }));
+  // languageVersion lets a deployment (and the Web Worker in the browser) verify they run the same language.
+  fastify.get("/health", async () => ({ status: "ok", languageVersion: LANGUAGE_VERSION }));
 
   fastify.post<{ Body: CompileRequestBody }>(
     "/compile",

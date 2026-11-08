@@ -110,6 +110,14 @@ export const ROUTES: readonly ProxyRouteConfig[] = [
     requiresAuth: true,
   },
   {
+    // Public and cheap: reports the language version the backend validates with (see the frontend's version badge).
+    method: "GET",
+    path: "/api/ai/health",
+    upstreamPath: "/health",
+    target: "ai",
+    requiresAuth: false,
+  },
+  {
     method: "POST",
     path: "/api/ai/suggest",
     upstreamPath: "/suggest",

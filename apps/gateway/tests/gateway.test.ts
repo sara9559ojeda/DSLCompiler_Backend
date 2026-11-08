@@ -154,3 +154,14 @@ describe("Gateway", () => {
     expect(fake.lastRequest).toMatchObject({ path: "/explain-error", method: "POST" });
   });
 });
+
+describe("Gateway: language version route", () => {
+  it("GET /api/ai/health is public and forwards to the ai service", async () => {
+    const upstream = new FakeUpstreamClient(jsonResponse({ status: "ok", languageVersion: "2.0.0" }));
+    const app = await buildServer({ upstreamClient: upstream });
+    const response = await app.inject({ method: "GET", url: "/api/ai/health" });
+    expect(response.statusCode).toBe(200);
+    expect(response.json().languageVersion).toBe("2.0.0");
+    expect(upstream.lastRequest).toMatchObject({ target: "ai", path: "/health", method: "GET" });
+  });
+});
