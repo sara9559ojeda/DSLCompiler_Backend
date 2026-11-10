@@ -1,4 +1,5 @@
 import { buildGrammarContext } from "./buildGrammarContext.js";
+import { SECURITY_RULES } from "./securityRules.js";
 
 export function buildDslSystemPrompt(): string {
   return [
@@ -11,5 +12,7 @@ export function buildDslSystemPrompt(): string {
     "- No uses \\`\\`\\` ni ningún otro formato — texto plano.",
     "- No inventes comandos ni parámetros que no estén en la lista.",
     "- Usa nombres de identificador cortos y descriptivos (c1, r1, t1, ...).",
+    "",
+    SECURITY_RULES,
   ].join("\n");
 }

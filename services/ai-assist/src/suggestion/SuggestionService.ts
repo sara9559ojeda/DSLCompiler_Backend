@@ -2,7 +2,7 @@ import type { Diagnostic } from "@saramariaojeda9559/compiler-core";
 import type { IClaudeClient } from "../claude/IClaudeClient.js";
 import type { IDslValidator } from "../validation/IDslValidator.js";
 import { extractDslCode } from "../prompts/extractDslCode.js";
-import { buildRetryPrompt } from "../prompts/buildRetryPrompt.js";
+import { buildRetryPrompt, buildSuggestUserPrompt } from "../prompts/buildRetryPrompt.js";
 
 export interface SuggestionResult {
   readonly dslSource: string;
@@ -25,7 +25,7 @@ export class SuggestionService {
   ) {}
 
   async suggest(userPrompt: string): Promise<SuggestionResult> {
-    const first = await this.generate(userPrompt);
+    const first = await this.generate(buildSuggestUserPrompt(userPrompt));
     const firstCheck = this.validator.validate(first);
     if (firstCheck.success) {
       return { dslSource: first, valid: true, diagnostics: [] };
