@@ -1,7 +1,7 @@
 import Fastify, { type FastifyInstance } from "fastify";
 import { LANGUAGE_VERSION } from "@saramariaojeda9559/compiler-core";
 import type { IClaudeClient } from "../claude/IClaudeClient.js";
-import { AnthropicClaudeClient } from "../claude/AnthropicClaudeClient.js";
+import { createClaudeClient } from "../claude/createClaudeClient.js";
 import type { IDslValidator } from "../validation/IDslValidator.js";
 import { DslValidator } from "../validation/DslValidator.js";
 import { SuggestionService } from "../suggestion/SuggestionService.js";
@@ -36,7 +36,13 @@ export function buildServer(options: BuildServerOptions = {}): FastifyInstance {
   registerErrorHandler(fastify);
 
   const claudeClient =
-    options.claudeClient ?? new AnthropicClaudeClient(ANTHROPIC_API_KEY, ANTHROPIC_MODEL, ANTHROPIC_MAX_TOKENS, ANTHROPIC_TIMEOUT_MS);
+    options.claudeClient ??
+    createClaudeClient({
+      apiKey: ANTHROPIC_API_KEY,
+      model: ANTHROPIC_MODEL,
+      maxTokens: ANTHROPIC_MAX_TOKENS,
+      timeoutMs: ANTHROPIC_TIMEOUT_MS,
+    });
   const validator = options.validator ?? new DslValidator();
 
   const suggestionService = new SuggestionService(claudeClient, validator, buildDslSystemPrompt());
