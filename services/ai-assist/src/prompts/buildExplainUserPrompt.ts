@@ -1,4 +1,5 @@
 import type { ReportedDiagnostic } from "../explanation/ReportedDiagnostic.js";
+import { wrap } from "../assist/guard.js";
 
 export function buildExplainUserPrompt(source: string, diagnostics: readonly ReportedDiagnostic[]): string {
   const numberedSource = source
@@ -14,5 +15,12 @@ export function buildExplainUserPrompt(source: string, diagnostics: readonly Rep
     })
     .join("\n");
 
-  return ["Código fuente:", numberedSource, "", "Diagnósticos del compilador:", diagnosticsList].join("\n");
+  // Both parts come from the client (the diagnostics are reported, not recomputed), so both are tagged as data.
+  return [
+    "Código fuente:",
+    wrap("codigo_actual", numberedSource),
+    "",
+    "Diagnósticos del compilador:",
+    wrap("errores_del_compilador", diagnosticsList),
+  ].join("\n");
 }
