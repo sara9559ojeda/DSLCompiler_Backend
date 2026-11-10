@@ -63,7 +63,10 @@ duplicarlo.
 `@fastify/rate-limit` en el gateway, configurable por entorno
 (`RATE_LIMIT_MAX`, `RATE_LIMIT_WINDOW_MS`). `@fastify/cors` con
 `CORS_ORIGIN` configurable — en desarrollo `*`, en producción debe
-restringirse al origen real del frontend. En Render, como `compiler`,
+restringirse a los orígenes reales del frontend: una lista separada por
+comas donde `*` puede reemplazar parte de un host (por ejemplo, para los
+despliegues de preview de Vercel) sin cruzar nunca un punto, así que no
+puede coincidir con otro dominio. En Render, como `compiler`,
 `projects` y `ai-assist` también tienen URL pública (ver arriba), alguien
 que les pegue directo evita el rate limit del gateway — no pueden leer/
 escribir datos ajenos sin un JWT válido (`projects` lo verifica), pero sí

@@ -123,8 +123,9 @@ services:
         value: https://compiler-img-projects.onrender.com
       - key: AI_SERVICE_URL
         value: https://compiler-img-ai-assist.onrender.com
-      # The frontend's real deployed URL (Vercel) — update here (and push)
-      # if it ever changes, instead of editing the dashboard by hand.
+      # The frontend's production URL plus its Vercel preview deployments
+      # (`*` matches part of one host label, never a dot) — update here (and
+      # push) if either changes, instead of editing the dashboard by hand.
       - key: CORS_ORIGIN
-        value: https://dslcompiler-web.vercel.app
+        value: https://dslcompiler-web.vercel.app,https://dslcompiler-*-saramariaojeda9559-gmailcoms-projects.vercel.app
 
