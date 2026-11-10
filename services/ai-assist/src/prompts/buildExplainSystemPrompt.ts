@@ -1,4 +1,5 @@
 import { buildGrammarContext } from "./buildGrammarContext.js";
+import { DATA_ONLY_SECURITY_RULES } from "./securityRules.js";
 
 export function buildExplainSystemPrompt(): string {
   return [
@@ -11,5 +12,7 @@ export function buildExplainSystemPrompt(): string {
     "- Por qué el compilador lo marca como error, según la gramática de arriba.",
     "- Cómo corregirlo, con un ejemplo corto si ayuda.",
     "No reescribas el programa completo — guía al estudiante a corregirlo él mismo.",
+    "",
+    DATA_ONLY_SECURITY_RULES,
   ].join("\n");
 }

@@ -1,4 +1,5 @@
 import "dotenv/config";
+import { parseCorsOrigins } from "./corsOrigins.js";
 
 /**
  * The gateway's only source of runtime configuration. No upstream URL,
@@ -8,7 +9,8 @@ export const PORT = Number(process.env.PORT ?? 4000);
 export const HOST = process.env.HOST ?? "0.0.0.0";
 
 export const JWT_SECRET = process.env.JWT_SECRET ?? "dev-secret-change-me";
-export const CORS_ORIGIN = process.env.CORS_ORIGIN ?? "*";
+/** Comma-separated allow-list; `*` alone allows any origin. See corsOrigins.ts for the wildcard rules. */
+export const CORS_ORIGINS = parseCorsOrigins(process.env.CORS_ORIGIN);
 
 export const RATE_LIMIT_MAX = Number(process.env.RATE_LIMIT_MAX ?? 100);
 export const RATE_LIMIT_WINDOW_MS = Number(process.env.RATE_LIMIT_WINDOW_MS ?? 60_000);

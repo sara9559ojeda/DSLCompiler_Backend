@@ -49,3 +49,12 @@ export const KEYWORDS: Readonly<Record<string, TokenType>> = {
   grupo: TokenType.Group,
   diagrama: TokenType.Diagram,
 };
+
+/**
+ * The token type for a name: its keyword if it is reserved, Identifier
+ * otherwise. Uses an own-property check so names such as `constructor` or
+ * `toString` are not mistaken for keywords through Object.prototype.
+ */
+export function tokenTypeForName(name: string): TokenType {
+  return Object.hasOwn(KEYWORDS, name) ? KEYWORDS[name]! : TokenType.Identifier;
+}

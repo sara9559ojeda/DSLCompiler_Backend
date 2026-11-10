@@ -1,6 +1,6 @@
 import type { Diagnostic } from "../diagnostics/Diagnostic.js";
 import { Token } from "./Token.js";
-import { KEYWORDS, TokenType } from "./TokenType.js";
+import { tokenTypeForName, TokenType } from "./TokenType.js";
 
 export interface LexResult {
   readonly tokens: readonly Token[];
@@ -199,7 +199,7 @@ export class Lexer {
     while (isAlphaNumeric(this.peek())) {
       lexeme += this.advance();
     }
-    this.tokens.push(new Token(KEYWORDS[lexeme] ?? TokenType.Identifier, lexeme, startPos, startOffset, lexeme.length));
+    this.tokens.push(new Token(tokenTypeForName(lexeme), lexeme, startPos, startOffset, lexeme.length));
   }
 
   private scanLineComment(): void {
