@@ -2,8 +2,9 @@
 export class ColorResolver {
   constructor(private readonly namedColors: Readonly<Record<string, string>>) {}
 
+  /** Own properties only: `toString` or `constructor` must not resolve through Object.prototype. */
   resolve(name: string): string | undefined {
-    return this.namedColors[name];
+    return Object.hasOwn(this.namedColors, name) ? this.namedColors[name] : undefined;
   }
 
   names(): readonly string[] {
