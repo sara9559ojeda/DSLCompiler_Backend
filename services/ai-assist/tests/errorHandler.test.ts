@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { buildServer } from "../src/http/server.js";
 import type { IClaudeClient } from "../src/claude/IClaudeClient.js";
+import { PublicServiceError } from "../src/errors/PublicServiceError.js";
 
 class ThrowingClaudeClient implements IClaudeClient {
   async complete(): Promise<string> {
@@ -22,6 +23,20 @@ describe("ai-assist error handling", () => {
     const body = response.json();
     expect(body.error.message).not.toContain("API key");
     expect(body.error.statusCode).toBe(500);
+  });
+
+  it("keeps the message and status of a PublicServiceError", async () => {
+    class UnavailableClaudeClient implements IClaudeClient {
+      async complete(): Promise<string> {
+        throw new PublicServiceError("Servicio en mantenimiento.", 503);
+      }
+    }
+    const app = buildServer({ claudeClient: new UnavailableClaudeClient() });
+
+    const response = await app.inject({ method: "POST", url: "/suggest", payload: { prompt: "un círculo rojo" } });
+
+    expect(response.statusCode).toBe(503);
+    expect(response.json()).toEqual({ error: { message: "Servicio en mantenimiento.", statusCode: 503 } });
   });
 
   it("keeps the specific message for a schema validation (400) error", async () => {
